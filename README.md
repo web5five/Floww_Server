@@ -10,6 +10,8 @@ The current bearer-token identity is a local handoff mechanism. PR #19 replaced 
 
 For an isolated Docker/PostgreSQL runtime check, see the [F016 Korean/English container guide](docs/CONTAINER_RUNTIME_KO_EN.md).
 
+F018 adds opt-in [wallet sign-in API and browser integration guidance](docs/WALLET_SIGNIN_KO_EN.md). It verifies EOA SIWE signatures and issues the common client JWT; existing business routes still use the development bearer filter pending shared auth integration.
+
 F017 separately verified the packaged merchant-proposal component with one real event Kiln call using synthetic inputs: nine assertions passed and 705 tokens were reported. See [live evidence and its limits](docs/AI_MERCHANT_PROPOSAL_KO_EN.md). This is component evidence; the common task API and payment path are not exercised.
 
 F006 acceptance fixes recheck the stored quote and mandate after the final model call, require a terminal status for complete evidence, and expose `modelEvidenceMode` plus per-attempt usage completeness. Local fixture calls are `local_model_fixture`; only the exact official endpoint is classified `kiln`, and historical events without provenance remain unknown. The F004 live Kiln evidence predates these fixes.

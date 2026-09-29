@@ -21,10 +21,14 @@ public class DevAuthFilter extends OncePerRequestFilter {
     private final String aliceToken;
     private final String bobToken;
     private final ObjectMapper mapper;
+    private final boolean walletEnabled;
+    private final boolean walletExampleEnabled;
 
     public DevAuthFilter(@Value("${floww.auth.alice-token:}") String aliceToken,
                          @Value("${floww.auth.bob-token:}") String bobToken,
-                         ObjectMapper mapper) {
+                         ObjectMapper mapper,
+                         @Value("${floww.auth.wallet.enabled:false}") boolean walletEnabled,
+                         @Value("${floww.auth.wallet.example-enabled:false}") boolean walletExampleEnabled) {
         if ((aliceToken.isBlank() && bobToken.isBlank())
                 || (!aliceToken.isBlank() && aliceToken.length() < 16)
                 || (!bobToken.isBlank() && bobToken.length() < 16)
@@ -34,11 +38,19 @@ public class DevAuthFilter extends OncePerRequestFilter {
         this.aliceToken = aliceToken;
         this.bobToken = bobToken;
         this.mapper = mapper;
+        this.walletEnabled = walletEnabled;
+        this.walletExampleEnabled = walletExampleEnabled;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().equals("/actuator/health");
+        String path = request.getRequestURI();
+        return path.equals("/actuator/health")
+                || (walletEnabled && request.getMethod().equals("POST")
+                    && (path.equals("/api/v1/auth/wallet/nonce") || path.equals("/api/v1/auth/wallet/verify")))
+                || (walletEnabled && walletExampleEnabled && request.getMethod().equals("GET")
+                    && (path.equals("/wallet-signin-example/") || path.equals("/wallet-signin-example/app.js")
+                        || path.equals("/wallet-signin-example/style.css")));
     }
 
     @Override
