@@ -241,6 +241,18 @@ class TaskAccountHttpIntegrationTest {
         assertEquals(0,db.queryForObject("SELECT count(*) FROM task_account_operations WHERE kind='PAYMENT' AND account_id=(SELECT id FROM task_accounts WHERE task_id=?::uuid)",Integer.class,id));
         db.update("UPDATE merchant_quotes SET registry_recipient_address=? WHERE task_id=?::uuid AND merchant_id='pharmacy-a'",
                 FIXTURE.recipient,id);
+        // Exact amount is a backend invariant: reject a one-unit-short order before reserve/sign/send.
+        db.update("UPDATE merchant_orders SET amount_base_units=?::numeric WHERE task_id=?::uuid",
+                java.math.BigInteger.valueOf(23_499_999),id);
+        var wrongAmount=call(HttpMethod.POST,prefix+"/account/payment",owner,null,Map.of());
+        assertEquals(409,wrongAmount.getStatusCode().value());
+        assertEquals(1,FIXTURE.sends.get());
+        assertEquals(0,db.queryForObject("SELECT count(*) FROM task_account_operations WHERE kind='PAYMENT' AND account_id=(SELECT id FROM task_accounts WHERE task_id=?::uuid)",Integer.class,id));
+        assertEquals("NOT_ATTEMPTED",db.queryForObject("SELECT payment_status FROM merchant_orders WHERE task_id=?::uuid",String.class,id));
+        JsonNode noPaymentHash=ok(HttpMethod.GET,prefix+"/account",owner,null,null,200);
+        assertTrue(noPaymentHash.path("paymentTxHash").isMissingNode() || noPaymentHash.path("paymentTxHash").isNull());
+        db.update("UPDATE merchant_orders SET amount_base_units=?::numeric WHERE task_id=?::uuid",
+                java.math.BigInteger.valueOf(23_500_000),id);
         var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
         JsonNode unknown;
         try {
