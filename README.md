@@ -1,27 +1,164 @@
-# Floww Server
+<div align="center">
 
-Java 21 / Spring Boot 3.5.16 / PostgreSQL 16.4 backend for a confirmed purchase-scope mandate, bounded Kiln `qwen3-32b` tool conversation, server-fetched test merchant quote, deterministic policy precheck, and owner-only persisted evidence. `REVIEWED` is a local precheck; no merchant purchase, wallet signing, transaction broadcast, or fulfillment is available.
+# 🌊 Floww Server
 
-For frontend, core backend, and chain integration, start with the [Korean/English API handoff](docs/API_HANDOFF_KO_EN.md) and import [OpenAPI 3.0.3](docs/openapi.json). These describe the implemented HTTP surface through upstream `8a5fe58`, including PR #14 common errors, PR #15 Java packages, and PR #19 Flyway migration; they are candidate integration documentation, not a team-approved product API. PR #19 changes database startup, not the documented HTTP shapes. [docs/API_CONTRACT.md](docs/API_CONTRACT.md) has earlier local setup and legacy quote-policy/evidence details, and [docs/TECHNICAL_DEMO.md](docs/TECHNICAL_DEMO.md) has the bilingual demonstration. The Maven wrapper is pinned to 3.9.16. Before a clean Compose setup, explicitly `docker pull postgres:16.4-alpine`; the Compose service intentionally uses `pull_policy: never`. `scripts/evaluate.sh` runs deterministic PostgreSQL/HTTP-fixture checks and writes `target/f006-evaluation.json`. `scripts/smoke.py` checks the packaged app and owner-isolated persistence.
+### AI can make the move. Your rules set the limits.
 
-`/actuator/health` is process/DB health. Authenticated `/api/integrations/readiness` reports Kiln/test merchant configuration; neither is proof of provider reachability or payment readiness. Without a configured merchant, the run fails closed. A configured merchant URL is permitted only on loopback and is labeled `local_test_merchant`.
+**A backend for bounded, reviewable AI-assisted purchases.**
 
-The current bearer-token identity is a local handoff mechanism. PR #19 replaced startup `schema.sql` with Flyway `db/migration/V1__initial_schema.sql` for database initialization; upgrading an existing populated database was not verified in this local integration. Core backend, merchant, wallet, frontend, and human domain owners must review their respective contracts before shared deployment. F002 prior work and AI coding assistance are disclosed in the demo guide; no PAIVERA implementation was copied.
+<p>
+  <img src="https://img.shields.io/badge/Java-21-4261FF?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.5.16-4261FF?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.5.16" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16.4-4261FF?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 16.4" />
+  <img src="https://img.shields.io/badge/Kiln-qwen3--32b-FFFF5C?style=for-the-badge&labelColor=F1EDE2&color=FFFF5C" alt="Kiln qwen3-32b" />
+</p>
 
-For an isolated Docker/PostgreSQL runtime check, see the [F016 Korean/English container guide](docs/CONTAINER_RUNTIME_KO_EN.md).
+<p><em>Clear scope. Deliberate decisions. A clean paper trail.</em></p>
 
-Issues #33–#35 (parent #32) add the JWT-only [`/api/v1/tasks` Task API](docs/TASK_API_KO_EN.md): versioned mandates with base-unit fUSDC amounts, a deterministic three-pharmacy simulator with a server merchant registry, deterministic ALLOW/DENY policy per attempt, EIP-712 purchase approval with single-use nonces, and idempotent merchant orders (Flyway `V4`). Orders do not pay; `paymentStatus` stays `NOT_ATTEMPTED`. Verification covers the local simulator and local test-wallet signatures only, not real Kiln, Sepolia payment or fulfillment.
+</div>
 
-F018 adds opt-in [wallet sign-in API and browser integration guidance](docs/WALLET_SIGNIN_KO_EN.md). It verifies EOA SIWE signatures and issues the common client JWT; existing business routes still use the development bearer filter pending shared auth integration.
+---
 
-F017 separately verified the packaged merchant-proposal component with one real event Kiln call using synthetic inputs: nine assertions passed and 705 tokens were reported. See [live evidence and its limits](docs/AI_MERCHANT_PROPOSAL_KO_EN.md). This is component evidence; the common task API and payment path are not exercised.
+## ✨ The Floww idea
 
-F006 acceptance fixes recheck the stored quote and mandate after the final model call, require a terminal status for complete evidence, and expose `modelEvidenceMode` plus per-attempt usage completeness. Local fixture calls are `local_model_fixture`; only the exact official endpoint is classified `kiln`, and historical events without provenance remain unknown. The F004 live Kiln evidence predates these fixes.
+AI should be able to help with a task without receiving a blank check. Floww is built around a simple boundary:
 
-F008 adds a stateless, proposal-only AI draft preflight with [candidate contract and examples](docs/AI_DRAFT_CONTRACT.md). Its `READY_FOR_REVIEW` result means a structurally complete **model proposal**, not user approval, semantic verification, legal eligibility or executable authority. Human review and separate backend authorization remain required; the F010 development route does not mutate approved mandates or create execution authority. `scripts/evaluate_ai_draft.sh` runs only local model fixtures.
+> **AI proposes. Deterministic policy checks. The user stays in control.**
 
-F009 adds a pure [review confirmation binding component](docs/REVIEW_CONFIRMATION_BINDING.md) that compares the exact reviewed F008 draft and server context with a separately supplied trusted confirmation receipt. `CONFIRMATION_MATCHED` is a binding check only; it does not create an executable mandate, wallet authorization or payment.
+The current execution slice connects a test mandate, merchant quote, policy result, and execution evidence. That makes it easier to see what was proposed, what passed review, and what still needs a human decision.
 
-F010 exposes a candidate authenticated development [AI draft HTTP route](docs/AI_DRAFT_HTTP.md) at `POST /api/ai/drafts`. It returns clarification questions or a descriptive proposal with separate model evidence. It does not persist a review receipt or create execution/payment authority; product auth and frontend integration remain pending.
+## 🧪 What this server does today
 
-F012–F014 add a separate [AI merchant proposal Java component](docs/AI_MERCHANT_PROPOSAL_KO_EN.md), with [executable synthetic mapping examples](docs/AI_INTEGRATION_EXAMPLES_KO_EN.md) and an [AI/error handoff](docs/AI_ERROR_HANDOFF_KO_EN.md). It calls the existing `integration.kiln.KilnClient` after PR #15, but no HTTP route or Spring wiring calls it yet. Core, merchant, auth and signer owners must supply authoritative task, mandate, asset, eligibility and quote mappings before use. `PROPOSED` is neither the F010 `READY_FOR_REVIEW` draft state nor payment approval or completion.
+The repository contains several useful backend slices at different maturity levels:
+
+- **Legacy execution API** — persists an owner-bound, explicitly confirmed *test mandate*, runs a bounded Kiln/tool conversation against a configured loopback merchant fixture, and records policy and model evidence.
+- **AI draft endpoint** — `POST /api/ai/drafts` returns clarification questions or a structured model proposal. `READY_FOR_REVIEW` means the proposal is structurally complete; it is **not** user approval or spending authority.
+- **AI merchant proposal component** — a Java component for proposing from merchant options. It has a documented contract and examples, but is not yet wired to an HTTP route or the shared Task API.
+- **Optional wallet sign-in** — an opt-in SIWE-style EOA sign-in path issues the existing client JWT. Wallet sign-in proves account control; it does not approve a purchase.
+- **Persistence and evidence** — PostgreSQL-backed records, Flyway migrations, owner-scoped reads, bounded event history, and evidence export.
+
+### 🚧 Be precise about the boundary
+
+This is an integration-stage backend, not a live purchasing service. The current `REVIEWED` state means a **local quote policy precheck passed**. The repository does not yet provide a live merchant purchase, spending-authority signer, transaction broadcast, payment settlement, or fulfillment verification. A local fixture run or model proposal must not be presented as proof of payment or delivery.
+
+## 🌀 Current legacy flow
+
+```mermaid
+flowchart LR
+    U[User-defined test mandate] --> S[Spring Boot API]
+    S --> M[Loopback merchant fixture]
+    S --> K[Kiln qwen3-32b<br/>or local HTTP fixture]
+    M --> P[Deterministic quote and mandate checks]
+    K --> P
+    P --> R[REVIEWED: ready for human review]
+    P --> X[REJECTED or FAILED with recorded reason]
+    S --> DB[(PostgreSQL<br/>events and evidence)]
+    R -. no payment is sent .-> N[No signer, settlement, or fulfillment]
+```
+
+The AI can choose only from server-provided offers and quotes. The server rechecks the stored quote and mandate before marking a run `REVIEWED`. Tool calls, provider provenance, usage, and policy outcomes are recorded without treating model text as authorization.
+
+## ⚡ Quick start
+
+### Requirements
+
+- Java 21
+- Docker Engine and Docker Compose
+- Python 3 for the local merchant and Kiln HTTP fixtures
+
+### Build
+
+With Java 21 and the local PostgreSQL configuration from the runbook:
+
+```bash
+./mvnw -B verify
+```
+
+### Run the local end-to-end fixture flow
+
+The full walkthrough covers local environment setup, PostgreSQL, the merchant fixture, the Kiln fixture, the server, and the smoke client:
+
+- [Local API contract and runbook](docs/API_CONTRACT.md)
+- [Container/PostgreSQL runtime guide](docs/CONTAINER_RUNTIME_KO_EN.md)
+- [Technical demo walkthrough](docs/TECHNICAL_DEMO.md)
+
+The Compose database binds to loopback and uses `pull_policy: never`. On a clean machine, pull the pinned database image before starting Compose:
+
+```bash
+docker pull postgres:16.4-alpine
+```
+
+Never commit `.env`, real API keys, wallet secrets, or private keys. Use [`.env.example`](.env.example) for variable names and keep credentials in a protected local environment.
+
+## 🔌 API map
+
+| Route | What it does | What it does **not** mean |
+| --- | --- | --- |
+| `GET /actuator/health` | Process and database health | Kiln reachability or payment readiness |
+| `GET /api/integrations/readiness` | Reports whether provider/fixture settings exist | A successful provider call or a funded wallet |
+| `POST /api/ai/drafts` | Returns clarification questions or a descriptive AI proposal | Approval, verified eligibility, or executable authority |
+| `POST /api/executions` + `POST /api/executions/{id}/run` | Runs the legacy local quote-policy flow | A purchase, payment, or delivery |
+| `GET /api/executions/{id}/evidence.json` | Exports persisted execution evidence | Proof of an on-chain transaction |
+
+See the [API handoff](docs/API_HANDOFF_KO_EN.md) and [OpenAPI 3.0.3 specification](docs/openapi.json) for request/response shapes, authentication, errors, and pagination.
+
+## 🛡️ Trust boundaries
+
+- **The model is a proposer, not an authority.** It cannot change the server-owned mandate, quote price, recipient, or expiry.
+- **Policy checks are deterministic.** Scope, item, recipient, currency, quote freshness, full cost, and deadline are checked outside the model.
+- **Unknown stays unknown.** An uncertain payment result must be reconciled before any retry; this repository currently has no live payment path.
+- **Evidence is explicit.** Local fixtures, live Kiln calls, testnet transactions, and fulfillment checks are separate kinds of evidence.
+- **Credentials stay server-side.** Development bearer tokens and Kiln keys must never be exposed to browser code or committed.
+
+## 🧰 Stack
+
+| Layer | Choice |
+| --- | --- |
+| Runtime | Java 21 |
+| Web/API | Spring Boot 3.5.16 |
+| Persistence | PostgreSQL 16.4, Spring JDBC |
+| Schema changes | Flyway |
+| AI provider integration | Kiln, fixed model `qwen3-32b` |
+| Chain utilities | Web3j crypto (wallet sign-in support) |
+| Local verification | JUnit, PostgreSQL, and loopback HTTP fixtures |
+
+## 🗂️ Where to look
+
+```text
+src/main/java/com/floww/server/
+├── aidraft/          # Stateless AI draft endpoint and review preflight
+├── aiproposal/       # Merchant proposal component (not HTTP-wired yet)
+├── auth/             # Email auth, JWT, and optional wallet sign-in
+├── execution/        # Legacy execution and local policy-precheck API
+├── integration/      # Kiln and loopback merchant adapters
+├── payment/          # Future payment/fact ports; no live implementation
+└── common/            # Shared auth filters and error handling
+
+src/main/resources/db/migration/  # Flyway schema history
+docs/                              # API contracts, handoffs, demos, evidence
+scripts/                           # Smoke and fixture evaluation helpers
+```
+
+## 📚 Docs & evidence
+
+- [API handoff](docs/API_HANDOFF_KO_EN.md) — current route inventory and integration boundaries
+- [AI draft contract](docs/AI_DRAFT_CONTRACT.md) — proposal schema and clarification behavior
+- [AI draft HTTP guide](docs/AI_DRAFT_HTTP.md) — request/response and frontend handoff
+- [Merchant proposal guide](docs/AI_MERCHANT_PROPOSAL_KO_EN.md) — Java component contract and live-call evidence limits
+- [Wallet sign-in guide](docs/WALLET_SIGNIN_KO_EN.md) — optional wallet authentication flow
+- [Review confirmation binding](docs/REVIEW_CONFIRMATION_BINDING.md) — exact-draft binding helper; not payment authorization
+- [Evidence index](docs/evidence/) — sanitized verification records and their stated scope
+
+## 🎨 Floww palette
+
+<p>
+  <img src="https://img.shields.io/badge/Primary-4261FF-4261FF?style=for-the-badge" alt="Floww primary blue #4261FF" />
+  <img src="https://img.shields.io/badge/Accent-FFFF5C-FFFF5C?style=for-the-badge&labelColor=333333" alt="Floww accent yellow #FFFF5C" />
+  <img src="https://img.shields.io/badge/Soft%20Canvas-F1EDE2-F1EDE2?style=for-the-badge&labelColor=555555" alt="Floww warm neutral #F1EDE2" />
+</p>
+
+<div align="center">
+
+**Less autopilot. More intention. Let good decisions flow.** 💙💛
+
+</div>
