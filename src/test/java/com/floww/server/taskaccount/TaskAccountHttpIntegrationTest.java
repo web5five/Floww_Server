@@ -94,7 +94,7 @@ class TaskAccountHttpIntegrationTest {
         volatile String deployHash,deployData;
         final Map<String,Object> receipts=new ConcurrentHashMap<>();
         final AtomicInteger sends=new AtomicInteger();
-        final String mandateHash="0x"+"ab".repeat(32);
+        volatile String mandateHash;
         final String runtime;
         Fixture() {
             try {runtime="0x"+JSON.readTree(TaskAccountHttpIntegrationTest.class.getResourceAsStream(
@@ -195,7 +195,11 @@ class TaskAccountHttpIntegrationTest {
         FIXTURE.owner=owner.wallet().getAddress().toLowerCase();FIXTURE.taskId=prepared.path("chainTaskId").asText();
         FIXTURE.review=prepared.path("reviewSnapshotDigest").asText();FIXTURE.token=prepared.path("tokenAddress").asText();
         FIXTURE.recipient=prepared.path("recipientAddress").asText();
-        FIXTURE.expiry="0x"+word(prepared.path("expiresAt").isTextual()?Instant.parse(prepared.path("expiresAt").asText()).getEpochSecond():0);
+        long expiresAt=Instant.parse(prepared.path("expiresAt").asText()).getEpochSecond();
+        FIXTURE.expiry="0x"+word(expiresAt);
+        FIXTURE.mandateHash=TaskAccountCrypto.mandateHash(11155111,FIXTURE.owner,FIXTURE.taskId,FIXTURE.review,
+                FIXTURE.token,FIXTURE.recipient,EXEC.getAddress().toLowerCase(),REPORT.getAddress().toLowerCase(),
+                java.math.BigInteger.valueOf(23_500_000),expiresAt);
         FIXTURE.deployHash=topic(UUID.randomUUID().toString());FIXTURE.deployData=prepared.path("deploymentData").asText();
         FIXTURE.receipts.put(FIXTURE.deployHash,Map.of("status","0x1","contractAddress",ACCOUNT));
         JsonNode bound=ok(HttpMethod.POST,prefix+"/account/bind",owner,null,
