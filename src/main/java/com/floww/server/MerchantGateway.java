@@ -1,5 +1,6 @@
 package com.floww.server;
 
+import com.floww.server.common.error.ApiException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
