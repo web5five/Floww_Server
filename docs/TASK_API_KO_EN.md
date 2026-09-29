@@ -27,7 +27,7 @@ All routes require a client JWT. Other users' tasks return 404. The dev-profile 
 - 금액은 **토큰 최소 단위 10진 정수 문자열**입니다. fUSDC decimals=6 → `"23500000"` = 23.5 fUSDC.
 - JSON 숫자, 소수점, 부호, 공백, 앞자리 0은 400 `INVALID_INPUT`. 서버 내부 계산은 `BigInteger`, DB는 `NUMERIC(78,0)`.
 - 승인 한도(`maxAmountBaseUnits`)는 **Task 전체 누적 지출 상한**입니다: 기존 주문 합계 + 새 견적 ≤ 한도.
-- Asset: `chainId=11155111`, `tokenAddress=0x84b494ff145a545d286321691a9b4febe6947d6a`, `tokenDecimals=6` (env `FLOWW_TASK_*`).
+- Asset: `chainId=11155111`, `tokenDecimals=6`; `tokenAddress` is set by `FLOWW_TASK_TOKEN_ADDRESS`. The source fallback is the older `0x84b494ff145a545d286321691a9b4febe6947d6a`, **not** the currently funded TaskAccount asset. The protected 2026-09-30 Preview explicitly uses `0x1390c8745Eb49069afD3b89393997e3FA14614f5`; verify the deployed response rather than trusting the fallback.
 
 ## 3. 약국 시뮬레이터 / Pharmacy simulator (#33, #17)
 
@@ -74,7 +74,7 @@ All routes require a client JWT. Other users' tasks return 404. The dev-profile 
     "goal": "…", "itemId": "acetaminophen-500mg-10",
     "maxAmountBaseUnits": "60000000", "consumedBaseUnits": "23500000", "remainingBaseUnits": "36500000",
     "budgetScope": "TASK_CUMULATIVE",
-    "asset": { "chainId": 11155111, "tokenAddress": "0x84b4…7d6a", "tokenDecimals": 6 },
+    "asset": { "chainId": 11155111, "tokenAddress": "0x1390…614f5", "tokenDecimals": 6 },
     "allowedRecipients": [{ "merchantId": "pharmacy-a", "recipientAddress": "0x…f10aa001" }],
     "allowedActions": ["PURCHASE"],
     "expiresAt": "2026-10-02T15:00:00Z", "confirmedAt": "2026-09-30T01:10:00Z",
@@ -134,7 +134,7 @@ All routes require a client JWT. Other users' tasks return 404. The dev-profile 
     "primaryType": "PurchaseApproval",
     "domain": { "name": "Floww", "version": "1", "chainId": 11155111 },
     "message": { "taskId": "…", "mandateId": "…", "version": "1", "merchantId": "pharmacy-a", "quoteId": "qt_a_…",
-                 "recipientAddress": "0x…f10aa001", "tokenAddress": "0x84b4…7d6a",
+                 "recipientAddress": "0x…f10aa001", "tokenAddress": "0x1390…614f5",
                  "amountBaseUnits": "23500000", "maxAmountBaseUnits": "60000000",
                  "expiresAt": "1790000000", "nonce": "0x…" }
   }
