@@ -1,5 +1,7 @@
-package com.floww.server;
+package com.floww.server.integration;
 
+import com.floww.server.integration.kiln.KilnClient;
+import com.floww.server.integration.merchant.MerchantGateway;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
