@@ -71,6 +71,18 @@ public enum ErrorCode {
     /** 정지된 계정. 비밀번호 검증을 통과한 뒤에만 응답한다 (계정 존재 여부 노출 방지). */
     USER_SUSPENDED(Category.HTTP, HttpStatus.FORBIDDEN, false,
             "정지된 계정입니다", "Account suspended"),
+    CHAIN_NOT_SUPPORTED(Category.HTTP, HttpStatus.BAD_REQUEST, false,
+            "지원하지 않는 체인입니다", "Chain not supported"),
+    NONCE_INVALID(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
+            "로그인 요청이 유효하지 않습니다", "Invalid or used login challenge"),
+    NONCE_EXPIRED(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
+            "로그인 요청이 만료되었습니다", "Login challenge expired"),
+    MESSAGE_MISMATCH(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
+            "로그인 메시지가 일치하지 않습니다", "Login message mismatch"),
+    SIGNATURE_INVALID(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
+            "지갑 서명이 유효하지 않습니다", "Invalid wallet signature"),
+    TOO_MANY_REQUESTS(Category.HTTP, HttpStatus.TOO_MANY_REQUESTS, true,
+            "로그인 요청이 너무 많습니다", "Too many login challenges"),
 
     /**
      * SA 6장 감사·데이터 접근: 작업 소유자는 자기 기록만 조회한다.
