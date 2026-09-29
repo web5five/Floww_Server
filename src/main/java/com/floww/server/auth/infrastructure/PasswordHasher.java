@@ -1,7 +1,9 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+
+import com.floww.server.auth.domain.PasswordPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 

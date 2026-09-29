@@ -6,6 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
+import com.floww.server.auth.domain.UserStatus;
+import com.floww.server.auth.infrastructure.UserRepository;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.util.UUID;
@@ -25,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
                 "floww.auth.bob-token=ci-only-bob-token-00002"})
 @Transactional
 class UserRepositoryTest {
-    @Autowired UserRepository users;
+    @Autowired
+    UserRepository users;
 
     private static String email() {
         return "repo-" + UUID.randomUUID() + "@test.floww";

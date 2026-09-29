@@ -1,5 +1,9 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
+import com.floww.server.auth.domain.UserStatus;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.sql.ResultSet;

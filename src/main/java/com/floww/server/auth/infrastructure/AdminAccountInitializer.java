@@ -1,5 +1,8 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
+import com.floww.server.auth.config.AuthInputs;
+import com.floww.server.auth.domain.PasswordPolicy;
+import com.floww.server.auth.domain.UserRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

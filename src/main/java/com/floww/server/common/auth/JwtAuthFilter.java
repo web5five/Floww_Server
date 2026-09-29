@@ -2,9 +2,9 @@ package com.floww.server.common.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.floww.server.aidraft.AiDraftHttpController;
-import com.floww.server.auth.JwtProvider;
-import com.floww.server.auth.TokenAudience;
-import com.floww.server.auth.UserRole;
+import com.floww.server.auth.infrastructure.JwtProvider;
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.UserRole;
 import com.floww.server.common.error.ErrorCode;
 import com.floww.server.common.error.ErrorResponse;
 import jakarta.servlet.FilterChain;

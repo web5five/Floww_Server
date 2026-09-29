@@ -1,5 +1,7 @@
-package com.floww.server.auth;
+package com.floww.server.auth.presentation;
 
+import com.floww.server.auth.presentation.dto.response.UserResponse;
+import com.floww.server.auth.application.UserService;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.util.UUID;

@@ -6,6 +6,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
+
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
+import com.floww.server.auth.domain.UserStatus;
+import com.floww.server.auth.infrastructure.JwtProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -210,7 +217,11 @@ class AuthHttpIntegrationTest {
                 "/api/executions",
                 mandate,
                 aliceToken);
-        assertEquals(200, created.getStatusCode().value());
+        assertEquals(
+                200,
+                created.getStatusCode().value(),
+                "실행 생성 실패 응답: " + created.getBody()
+        );
 
         String executionId = json.readTree(created.getBody()).path("id").asText();
         assertFalse(executionId.isBlank());

@@ -1,5 +1,8 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
