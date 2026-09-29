@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:floww:ai-draft:v1",
+  "title": "Floww AI draft proposal v1 (candidate, non-authorizing)",
+  "description": "Null means unresolved. Structural readiness requires the deterministic preflight in addition to this shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "objective", "itemScope", "providerCriteria", "maximumTotalCost", "deadline", "fulfillmentCriterion"],
+  "properties": {
+    "schemaVersion": {"const": "ai-draft.v1"},
+    "objective": {"$ref": "#/$defs/nullableText"},
+    "itemScope": {"$ref": "#/$defs/nullableText"},
+    "providerCriteria": {"$ref": "#/$defs/nullableText"},
+    "maximumTotalCost": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "asset", "includesAllUserPaidFees"],
+          "properties": {
+            "amount": {"type": ["string", "null"], "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?$"},
+            "asset": {"type": ["string", "null"], "pattern": "^[A-Za-z][A-Za-z0-9_]{1,31}$"},
+            "includesAllUserPaidFees": {"type": ["boolean", "null"]}
+          }
+        }
+      ]
+    },
+    "deadline": {"$ref": "#/$defs/nullableText", "description": "Preflight requires a future absolute ISO 8601 date-time with offset."},
+    "fulfillmentCriterion": {"$ref": "#/$defs/nullableText"}
+  },
+  "$defs": {
+    "nullableText": {"type": ["string", "null"], "maxLength": 500}
+  }
+}
