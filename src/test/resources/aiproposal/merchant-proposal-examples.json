@@ -1,0 +1,43 @@
+{
+  "schema": "f013-local-fixture-v1",
+  "clock": "2040-01-01T00:00:00Z",
+  "input": {
+    "context": {
+      "taskRef": "synthetic-task-1",
+      "mandateRef": "synthetic-mandate-1",
+      "mandateRevision": "synthetic-revision-1",
+      "itemId": "synthetic-item",
+      "maximumTotalBaseUnits": "60000000",
+      "asset": {"chainId": "synthetic-chain", "tokenAddress": "synthetic-MockUSDC", "decimals": 6},
+      "deadline": "2040-01-01T01:00:00Z",
+      "permittedPairs": [
+        {"merchantId": "A", "recipient": "synthetic-recipient-A"},
+        {"merchantId": "B", "recipient": "synthetic-recipient-B"},
+        {"merchantId": "C", "recipient": "synthetic-recipient-C"}
+      ],
+      "requiredFulfillmentBy": "2040-01-01T00:50:00Z",
+      "prescriptionEligible": true,
+      "identityEligible": false,
+      "mandateState": "ACTIVE"
+    },
+    "quotes": [
+      {"quoteId": "quote-A43", "merchantId": "A", "recipient": "synthetic-recipient-A", "itemId": "synthetic-item", "asset": {"chainId": "synthetic-chain", "tokenAddress": "synthetic-MockUSDC", "decimals": 6}, "totalBaseUnits": "43000000", "expiresAt": "2040-01-01T00:10:00Z", "inStock": true, "promisedFulfillmentAt": "2040-01-01T00:40:00Z", "prescriptionRequired": true, "identityRequired": false},
+      {"quoteId": "quote-B47", "merchantId": "B", "recipient": "synthetic-recipient-B", "itemId": "synthetic-item", "asset": {"chainId": "synthetic-chain", "tokenAddress": "synthetic-MockUSDC", "decimals": 6}, "totalBaseUnits": "47000000", "expiresAt": "2040-01-01T00:10:00Z", "inStock": true, "promisedFulfillmentAt": "2040-01-01T00:40:00Z", "prescriptionRequired": true, "identityRequired": true},
+      {"quoteId": "quote-C63", "merchantId": "C", "recipient": "synthetic-recipient-C", "itemId": "synthetic-item", "asset": {"chainId": "synthetic-chain", "tokenAddress": "synthetic-MockUSDC", "decimals": 6}, "totalBaseUnits": "63000000", "expiresAt": "2040-01-01T00:10:00Z", "inStock": true, "promisedFulfillmentAt": "2040-01-01T00:40:00Z", "prescriptionRequired": true, "identityRequired": false}
+    ]
+  },
+  "cases": [
+    {"id": "A43-only-eligible", "modelArguments": {"quoteId": "quote-A43"}, "expected": {"status": "PROPOSED", "reason": null, "selectedQuoteId": "quote-A43", "modelCalls": 1, "providerBudgetSeconds": 45, "findings": {"quote-A43": [], "quote-B47": ["IDENTITY_NOT_VERIFIED"], "quote-C63": ["OVER_BUDGET"]}}},
+    {"id": "B47-after-identity-verification", "contextChanges": {"identityEligible": true}, "modelArguments": {"quoteId": "quote-B47"}, "expected": {"status": "PROPOSED", "reason": null, "selectedQuoteId": "quote-B47", "modelCalls": 1, "providerBudgetSeconds": 45, "findings": {"quote-A43": [], "quote-B47": [], "quote-C63": ["OVER_BUDGET"]}}},
+    {"id": "missing-budget", "contextChanges": {"maximumTotalBaseUnits": null}, "expected": {"status": "CLARIFICATION_REQUIRED", "reason": "BOUNDARY_MISSING", "selectedQuoteId": null, "modelCalls": 0, "findings": {}}} ,
+    {"id": "no-eligible-quote", "quoteIds": ["quote-B47", "quote-C63"], "expected": {"status": "NO_CANDIDATE", "reason": "NO_ELIGIBLE_QUOTE", "selectedQuoteId": null, "modelCalls": 0, "findings": {"quote-B47": ["IDENTITY_NOT_VERIFIED"], "quote-C63": ["OVER_BUDGET"]}}} ,
+    {"id": "unknown-identity-is-not-false", "contextChanges": {"identityEligible": null}, "quoteIds": ["quote-B47"], "expected": {"status": "CLARIFICATION_REQUIRED", "reason": "ELIGIBILITY_EVIDENCE_MISSING", "selectedQuoteId": null, "modelCalls": 0, "findings": {"quote-B47": ["IDENTITY_EVIDENCE_MISSING"]}}} ,
+    {"id": "model-selects-known-ineligible-C63", "modelArguments": {"quoteId": "quote-C63"}, "expected": {"status": "REJECTED", "reason": "MODEL_QUOTE_NOT_ELIGIBLE", "selectedQuoteId": null, "modelCalls": 1, "providerBudgetSeconds": 45, "findings": {"quote-A43": [], "quote-B47": ["IDENTITY_NOT_VERIFIED"], "quote-C63": ["OVER_BUDGET"]}}},
+    {"id": "model-selects-unknown-quote", "modelArguments": {"quoteId": "quote-unknown"}, "expected": {"status": "REJECTED", "reason": "MODEL_QUOTE_NOT_ELIGIBLE", "selectedQuoteId": null, "modelCalls": 1, "providerBudgetSeconds": 45, "findings": {"quote-A43": [], "quote-B47": ["IDENTITY_NOT_VERIFIED"], "quote-C63": ["OVER_BUDGET"]}}},
+    {"id": "model-adds-authority", "modelArguments": {"quoteId": "quote-A43", "approved": true}, "expected": {"status": "MODEL_FAILURE", "reason": "MODEL_ARGUMENTS_INVALID", "selectedQuoteId": null, "modelCalls": 1, "providerBudgetSeconds": 45, "findings": {"quote-A43": [], "quote-B47": ["IDENTITY_NOT_VERIFIED"], "quote-C63": ["OVER_BUDGET"]}}},
+    {"id": "stale-mandate", "contextChanges": {"deadline": "2039-12-31T23:59:59Z"}, "expected": {"status": "REJECTED", "reason": "MANDATE_INACTIVE_OR_EXPIRED", "selectedQuoteId": null, "modelCalls": 0, "findings": {}}} ,
+    {"id": "revoked-mandate", "contextChanges": {"mandateState": "REVOKED"}, "expected": {"status": "REJECTED", "reason": "MANDATE_INACTIVE_OR_EXPIRED", "selectedQuoteId": null, "modelCalls": 0, "findings": {}}} ,
+    {"id": "completed-mandate", "contextChanges": {"mandateState": "COMPLETED"}, "expected": {"status": "REJECTED", "reason": "MANDATE_INACTIVE_OR_EXPIRED", "selectedQuoteId": null, "modelCalls": 0, "findings": {}}} ,
+    {"id": "quote-expires-during-inference", "quoteIds": ["quote-A43"], "quoteChanges": {"quote-A43": {"expiresAt": "2040-01-01T00:00:02Z"}}, "advanceClockSecondsOnModelCall": 3, "modelArguments": {"quoteId": "quote-A43"}, "expected": {"status": "REJECTED", "reason": "EXPIRED_DURING_PROPOSAL", "selectedQuoteId": null, "modelCalls": 1, "providerBudgetSeconds": 2, "findings": {"quote-A43": []}}}
+  ]
+}
