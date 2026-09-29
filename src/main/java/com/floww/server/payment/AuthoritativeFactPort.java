@@ -1,4 +1,4 @@
-package com.floww.server;
+package com.floww.server.payment;
 
 import java.time.Instant;
 import java.util.UUID;

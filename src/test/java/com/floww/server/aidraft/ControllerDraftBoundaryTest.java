@@ -2,7 +2,7 @@ package com.floww.server.aidraft;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.floww.server.KilnClient;
+import com.floww.server.integration.kiln.KilnClient;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;

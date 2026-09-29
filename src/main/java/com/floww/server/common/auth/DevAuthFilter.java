@@ -1,4 +1,4 @@
-package com.floww.server;
+package com.floww.server.common.auth;
 
 import com.floww.server.aidraft.AiDraftHttpController;
 import com.floww.server.common.error.ErrorCode;

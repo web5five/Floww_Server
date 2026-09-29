@@ -1,7 +1,8 @@
-package com.floww.server;
+package com.floww.server.execution;
 
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
+import com.floww.server.integration.merchant.MerchantGateway;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
