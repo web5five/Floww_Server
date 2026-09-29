@@ -24,3 +24,6 @@ Amounts remain decimal integer strings in token base units. The Admin DTOs never
 ## Verification boundary / 검증 범위
 
 The focused MockMvc test checks anonymous/client rejection, admin success, no-store, input limits, read-only routing and DTO exclusion. The database integration test uses a disposable local PostgreSQL 16 database and the real Spring HTTP/JWT boundary to check filters, pagination, persisted Task/attempt/account/event linkage and secret-marker exclusion. This synthetic fixture is not hosted Preview access, Sepolia proof or user acceptance.
+# Independent controller verification — 2026-09-30
+
+Controller reviewed the additive ADMIN-role and ADMIN-audience GET routes and explicit field projections, then reran the complete suite on the final code in a disposable native PostgreSQL 16 database: 197 tests, 0 failures, 0 errors, 0 skipped (Java 21, `./mvnw -q -DargLine=-Xmx512m test`). Earlier worker runs included one failure in the existing time-sensitive expiration test; both its focused rerun and this later independent full run passed. This proves local database/API regressions, not deployed admin access or a new live payment.
