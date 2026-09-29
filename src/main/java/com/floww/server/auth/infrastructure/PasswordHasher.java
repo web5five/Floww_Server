@@ -20,7 +20,7 @@ public class PasswordHasher {
     }
 
     /** 테스트에서 낮은 cost로 빠르게 돌리기 위한 생성자. */
-    PasswordHasher(int strength) {
+    public PasswordHasher(int strength) {
         this.encoder = new BCryptPasswordEncoder(strength);
         this.dummyHash = encoder.encode(UUID.randomUUID().toString());
     }
