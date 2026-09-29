@@ -1,4 +1,4 @@
-package com.floww.server.auth;
+package com.floww.server.auth.presentation.dto.request;
 
 public record EmailSigninRequest(String email, String password) {
 

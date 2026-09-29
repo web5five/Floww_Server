@@ -15,8 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.context.annotation.Profile;
 
 @Component
+@Profile("dev")
 public class DevAuthFilter extends OncePerRequestFilter {
     private final String aliceToken;
     private final String bobToken;
@@ -45,12 +47,20 @@ public class DevAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/actuator/health")
-                || (walletEnabled && request.getMethod().equals("POST")
-                    && (path.equals("/api/v1/auth/wallet/nonce") || path.equals("/api/v1/auth/wallet/verify")))
-                || (walletEnabled && walletExampleEnabled && request.getMethod().equals("GET")
-                    && (path.equals("/wallet-signin-example/") || path.equals("/wallet-signin-example/app.js")
-                        || path.equals("/wallet-signin-example/style.css")));
+        String method = request.getMethod();
+
+        return (method.equals("GET") && path.equals("/actuator/health"))
+                || (method.equals("POST")
+                && (path.equals("/api/v1/auth/email/signup")
+                || path.equals("/api/v1/auth/email/signin")
+                || path.equals("/api/v1/admin/auth/signin")))
+                || (walletEnabled && method.equals("POST")
+                && (path.equals("/api/v1/auth/wallet/nonce")
+                || path.equals("/api/v1/auth/wallet/verify")))
+                || (walletEnabled && walletExampleEnabled && method.equals("GET")
+                && (path.equals("/wallet-signin-example/")
+                || path.equals("/wallet-signin-example/app.js")
+                || path.equals("/wallet-signin-example/style.css")));
     }
 
     @Override

@@ -4,11 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.floww.server.auth.infrastructure.PasswordHasher;
 import org.junit.jupiter.api.Test;
 
 /** Issue #22: BCrypt 해시·검증. 테스트 속도를 위해 cost 4를 쓴다. */
 class PasswordHasherTest {
-    private final PasswordHasher hasher = new PasswordHasher(4);
+    public final PasswordHasher hasher = new PasswordHasher(4);
 
     @Test
     void hashIsSaltedBcryptAndVerifies() {

@@ -1,4 +1,4 @@
-package com.floww.server.auth;
+package com.floww.server.auth.domain;
 
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;

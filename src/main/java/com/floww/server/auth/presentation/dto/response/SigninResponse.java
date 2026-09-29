@@ -1,6 +1,7 @@
-package com.floww.server.auth;
+package com.floww.server.auth.presentation.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.floww.server.auth.domain.User;
 
 public record SigninResponse(
         String accessToken,

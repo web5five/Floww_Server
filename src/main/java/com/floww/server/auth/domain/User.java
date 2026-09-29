@@ -1,4 +1,4 @@
-package com.floww.server.auth;
+package com.floww.server.auth.domain;
 
 import java.time.Instant;
 import java.util.UUID;
