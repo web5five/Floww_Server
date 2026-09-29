@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Floww | Delegated purchase demo</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f4f5f9; background: #101522; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    main { max-width: 880px; margin: auto; padding: 72px 24px 96px; }
+    .eyebrow { color: #a6ecdb; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { font-size: clamp(2.2rem, 7vw, 4.2rem); line-height: 1.06; letter-spacing: -.05em; margin: 20px 0; }
+    p { color: #bbc5d8; line-height: 1.65; font-size: 1.05rem; }
+    .lead { max-width: 660px; font-size: 1.2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin: 42px 0; }
+    article { padding: 24px; border: 1px solid #3c4c62; border-radius: 16px; background: #182234; }
+    h2 { font-size: 1.05rem; margin: 0 0 12px; }
+    article p { font-size: .94rem; margin: 0; }
+    a { color: #a6ecdb; text-underline-offset: .2em; }
+    .links { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 30px; }
+    .note { border-left: 3px solid #a6ecdb; padding-left: 16px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Floww · Hackathon demonstration</div>
+    <h1>Bounded delegation, visible evidence.</h1>
+    <p class="lead">Floww explores a purchase flow where an owner defines a budget and recipient, an AI proposes a merchant, and the server enforces the mandate before any testnet payment.</p>
+    <div class="grid">
+      <article><h2>One service, three identities</h2><p>Pharmacies A, B and C are deterministic merchant simulations served by one backend. They are not real pharmacies.</p></article>
+      <article><h2>Durable task state</h2><p>Tasks, decisions and chain-operation state are persisted in PostgreSQL. Requests do not rely on an always-running worker.</p></article>
+      <article><h2>Public Sepolia evidence</h2><p>The technical record separates live testnet transactions from simulated pharmacy fulfillment. It is not evidence of real-world delivery.</p></article>
+    </div>
+    <nav class="links" aria-label="Project links">
+      <a href="/actuator/health">Backend health</a>
+      <a href="https://github.com/web5five/Floww_Server/blob/main/docs/TASKACCOUNT_E2E_KO_EN.md">Implementation guide</a>
+      <a href="https://github.com/web5five/Floww_Server/blob/main/reports/F031_RESULT.md">Testnet evidence</a>
+      <a href="https://github.com/web5five/Floww_Server">Source repository</a>
+    </nav>
+    <p class="note">This public page does not authorize spending. API actions require their own authentication and policy checks. The merchant and fulfillment parts of the demonstration are simulations.</p>
+  </main>
+</body>
+</html>
