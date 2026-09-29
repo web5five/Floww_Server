@@ -1,7 +1,9 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+
+import com.floww.server.auth.domain.PasswordPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +20,7 @@ public class PasswordHasher {
     }
 
     /** 테스트에서 낮은 cost로 빠르게 돌리기 위한 생성자. */
-    PasswordHasher(int strength) {
+    public PasswordHasher(int strength) {
         this.encoder = new BCryptPasswordEncoder(strength);
         this.dummyHash = encoder.encode(UUID.randomUUID().toString());
     }

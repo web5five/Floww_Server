@@ -1,7 +1,7 @@
 package com.floww.server.auth.wallet;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.floww.server.auth.SigninResponse;
+import com.floww.server.auth.presentation.dto.response.SigninResponse;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
