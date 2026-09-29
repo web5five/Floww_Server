@@ -70,14 +70,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         JwtProvider.VerifiedToken claims = verified.get();
-        if (path.startsWith("/api/v1/admin/")
+
+        boolean adminPath = path.startsWith("/api/v1/admin/");
+        boolean ownProfilePath = path.equals("/api/v1/users/me");
+
+        if (adminPath
                 && (claims.role() != UserRole.ADMIN
                 || claims.audience() != TokenAudience.ADMIN)) {
             writeError(request, response, ErrorCode.FORBIDDEN);
             return;
         }
 
-        if (!path.startsWith("/api/v1/admin/")
+        boolean adminProfileToken = ownProfilePath
+                && claims.role() == UserRole.ADMIN
+                && claims.audience() == TokenAudience.ADMIN;
+
+        if (!adminPath && !adminProfileToken
                 && claims.audience() != TokenAudience.CLIENT) {
             writeError(request, response, ErrorCode.FORBIDDEN);
             return;
