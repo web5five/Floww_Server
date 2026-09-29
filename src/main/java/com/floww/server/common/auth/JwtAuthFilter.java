@@ -2,8 +2,8 @@ package com.floww.server.common.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.floww.server.aidraft.AiDraftHttpController;
-import com.floww.server.auth.infrastructure.JwtProvider;
 import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.infrastructure.JwtProvider;
 import com.floww.server.auth.domain.UserRole;
 import com.floww.server.common.error.ErrorCode;
 import com.floww.server.common.error.ErrorResponse;
@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -24,18 +25,37 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtProvider jwt;
     private final ObjectMapper mapper;
+    private final boolean walletEnabled;
+    private final boolean walletExampleEnabled;
 
-    public JwtAuthFilter(JwtProvider jwt, ObjectMapper mapper) {
+    public JwtAuthFilter(
+            JwtProvider jwt,
+            ObjectMapper mapper,
+            @Value("${floww.auth.wallet.enabled:false}") boolean walletEnabled,
+            @Value("${floww.auth.wallet.example-enabled:false}") boolean walletExampleEnabled) {
         this.jwt = jwt;
         this.mapper = mapper;
+        this.walletEnabled = walletEnabled;
+        this.walletExampleEnabled = walletExampleEnabled;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
+        String method = request.getMethod();
+
         return path.equals("/actuator/health")
                 || path.startsWith("/api/v1/auth/email/")
-                || path.equals("/api/v1/admin/auth/signin");
+                || path.equals("/api/v1/admin/auth/signin")
+                || (walletEnabled
+                && method.equals("POST")
+                && (path.equals("/api/v1/auth/wallet/nonce")
+                || path.equals("/api/v1/auth/wallet/verify")))
+                || (walletEnabled && walletExampleEnabled
+                && method.equals("GET")
+                && (path.equals("/wallet-signin-example/")
+                || path.equals("/wallet-signin-example/app.js")
+                || path.equals("/wallet-signin-example/style.css")));
     }
 
     @Override

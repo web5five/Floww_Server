@@ -2,17 +2,16 @@ package com.floww.server.auth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.UUID;
-
 import com.floww.server.auth.config.TokenAudience;
 import com.floww.server.auth.domain.AuthProvider;
 import com.floww.server.auth.domain.User;
 import com.floww.server.auth.domain.UserRole;
 import com.floww.server.auth.domain.UserStatus;
 import com.floww.server.auth.infrastructure.JwtProvider;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -216,12 +215,13 @@ class AuthHttpIntegrationTest {
         ResponseEntity<String> created = post(
                 "/api/executions",
                 mandate,
-                aliceToken);
+                aliceToken,
+                UUID.randomUUID().toString());
+
         assertEquals(
                 200,
                 created.getStatusCode().value(),
-                "실행 생성 실패 응답: " + created.getBody()
-        );
+                "실행 생성 실패 응답: " + created.getBody());
 
         String executionId = json.readTree(created.getBody()).path("id").asText();
         assertFalse(executionId.isBlank());
@@ -256,8 +256,21 @@ class AuthHttpIntegrationTest {
     }
 
     private ResponseEntity<String> post(String path, String body, String token) {
+        return post(path, body, token, null);
+    }
+
+    private ResponseEntity<String> post(
+            String path,
+            String body,
+            String token,
+            String idempotencyKey) {
         HttpHeaders headers = headers(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
+
+        if (idempotencyKey != null) {
+            headers.set("Idempotency-Key", idempotencyKey);
+        }
+
         return http.exchange(
                 path,
                 HttpMethod.POST,

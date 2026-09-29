@@ -9,6 +9,7 @@ import com.floww.server.common.error.ErrorCode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,10 +30,13 @@ public class UserRepository {
 
     /**
      * status=ACTIVE, provider=EMAIL.
+     *
      * @throws ApiException EMAIL_ALREADY_EXISTS
      */
     public User save(String email, String passwordHash, UserRole role, String displayName) {
+        String normalizedEmail = normalizeEmail(email);
         List<User> rows;
+
         try {
             rows = db.query("""
                     INSERT INTO users (id, email, password_hash, role, status, provider, display_name)
@@ -40,33 +44,56 @@ public class UserRepository {
                     ON CONFLICT ON CONSTRAINT users_email_key DO NOTHING
                     """ + "RETURNING " + COLUMNS,
                     MAPPER,
-                    UUID.randomUUID(), email, passwordHash, role.name(),
-                    UserStatus.ACTIVE.name(), AuthProvider.EMAIL.name(), displayName);
+                    UUID.randomUUID(),
+                    normalizedEmail,
+                    passwordHash,
+                    role.name(),
+                    UserStatus.ACTIVE.name(),
+                    AuthProvider.EMAIL.name(),
+                    displayName);
         } catch (DataIntegrityViolationException e) {
             throw sanitized(e);
         }
-        if (rows.isEmpty()) throw new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS);
+
+        if (rows.isEmpty()) {
+            throw new ApiException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
         return rows.get(0);
     }
 
     public Optional<User> findByEmail(String email) {
-        return first(db.query("SELECT " + COLUMNS + " FROM users WHERE email = ?", MAPPER, email));
+        return first(db.query(
+                "SELECT " + COLUMNS + " FROM users WHERE email = ?",
+                MAPPER,
+                normalizeEmail(email)));
     }
 
     public Optional<User> findById(UUID id) {
-        return first(db.query("SELECT " + COLUMNS + " FROM users WHERE id = ?", MAPPER, id));
+        return first(db.query(
+                "SELECT " + COLUMNS + " FROM users WHERE id = ?",
+                MAPPER,
+                id));
     }
 
     /** 가입 전 중복 확인용. 최종 중복 판단은 {@link #save}의 제약이 한다 (동시 가입 대비). */
     public boolean existsByEmail(String email) {
         return Boolean.TRUE.equals(db.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM users WHERE email = ?)", Boolean.class, email));
+                "SELECT EXISTS (SELECT 1 FROM users WHERE email = ?)",
+                Boolean.class,
+                normalizeEmail(email)));
     }
 
     /** 9번 어드민 계정 생성: ADMIN이 이미 있는지 확인한다. */
     public boolean existsByRole(UserRole role) {
         return Boolean.TRUE.equals(db.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM users WHERE role = ?)", Boolean.class, role.name()));
+                "SELECT EXISTS (SELECT 1 FROM users WHERE role = ?)",
+                Boolean.class,
+                role.name()));
+    }
+
+    private static String normalizeEmail(String email) {
+        return email.strip().toLowerCase(Locale.ROOT);
     }
 
     private static Optional<User> first(List<User> rows) {
@@ -75,8 +102,11 @@ public class UserRepository {
 
     /** 원인 예외(DETAIL에 행 전체 포함)를 버리고 SQLState만 남긴다. */
     private static IllegalStateException sanitized(DataIntegrityViolationException e) {
-        String state = e.getMostSpecificCause() instanceof SQLException sql ? sql.getSQLState() : "unknown";
-        return new IllegalStateException("users write violated a constraint (SQLState " + state + ")");
+        String state = e.getMostSpecificCause() instanceof SQLException sql
+                ? sql.getSQLState()
+                : "unknown";
+        return new IllegalStateException(
+                "users write violated a constraint (SQLState " + state + ")");
     }
 
     private static final RowMapper<User> MAPPER = (ResultSet rs, int rowNum) -> new User(
