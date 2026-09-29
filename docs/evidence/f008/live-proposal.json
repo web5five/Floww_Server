@@ -1,0 +1,43 @@
+{
+  "task" : "F008",
+  "observedAt" : "2026-09-29T01:57:51.375329Z",
+  "scenario" : "synthetic_public_data_csv_proposal_only",
+  "evidenceMode" : "live_kiln_proposal",
+  "paymentCalls" : 0,
+  "humanApproval" : false,
+  "outcome" : {
+    "preflight" : {
+      "status" : "READY_FOR_REVIEW",
+      "schemaVersion" : "ai-draft.v1",
+      "issues" : [ ],
+      "draft" : {
+        "schemaVersion" : "ai-draft.v1",
+        "objective" : "Obtain a UTF-8 CSV report of public air-temperature data for Seoul",
+        "itemScope" : "Public air-temperature data for Seoul in UTF-8 CSV format",
+        "providerCriteria" : "Provider must supply data in UTF-8 CSV format",
+        "maximumTotalCost" : {
+          "amount" : "5.00",
+          "asset" : "USD",
+          "includesAllUserPaidFees" : true
+        },
+        "deadline" : "2026-09-30T10:00:00+09:00",
+        "fulfillmentCriterion" : "User receives a downloadable CSV file with date and temperature columns"
+      }
+    },
+    "failureCode" : null,
+    "provenance" : {
+      "modelId" : "qwen3-32b",
+      "modelEvidenceMode" : "kiln",
+      "toolCallId" : "call-86ebf0b2695841768b8bbb7c884d857c",
+      "generationId" : "bf9b3a2d-176c-4783-8515-6887f7b1adee",
+      "usageStatus" : "reported",
+      "usage" : {
+        "prompt_tokens" : 548,
+        "total_tokens" : 1065,
+        "completion_tokens" : 517
+      },
+      "cost" : null,
+      "attempts" : 1
+    }
+  }
+}

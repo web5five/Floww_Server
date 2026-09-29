@@ -125,6 +125,7 @@ public class KilnClient {
     }
 
     private static Map<String, Object> tool(String name) {
+        if ("propose_ai_draft".equals(name)) return draftTool();
         String argument = switch (name) {
             case "search_offers" -> "itemId";
             case "get_quote" -> "offerId";
@@ -140,6 +141,26 @@ public class KilnClient {
                 "description", description, "parameters", Map.of("type", "object",
                         "additionalProperties", false, "required", List.of(argument),
                         "properties", Map.of(argument, Map.of("type", "string", "description", argument)))));
+    }
+
+    private static Map<String, Object> draftTool() {
+        Map<String, Object> nullableText = Map.of("type", List.of("string", "null"));
+        Map<String, Object> cost = Map.of("type", List.of("object", "null"),
+                "additionalProperties", false,
+                "required", List.of("amount", "asset", "includesAllUserPaidFees"),
+                "properties", Map.of("amount", nullableText, "asset", nullableText,
+                        "includesAllUserPaidFees", Map.of("type", List.of("boolean", "null"))));
+        Map<String, Object> properties = Map.of(
+                "schemaVersion", Map.of("type", "string", "enum", List.of("ai-draft.v1")),
+                "objective", nullableText, "itemScope", nullableText,
+                "providerCriteria", nullableText, "maximumTotalCost", cost,
+                "deadline", nullableText, "fulfillmentCriterion", nullableText);
+        return Map.of("type", "function", "function", Map.of("name", "propose_ai_draft",
+                "description", "Propose descriptive task boundaries for structural review only; no authorization.",
+                "parameters", Map.of("type", "object", "additionalProperties", false,
+                        "required", List.of("schemaVersion", "objective", "itemScope",
+                                "providerCriteria", "maximumTotalCost", "deadline", "fulfillmentCriterion"),
+                        "properties", properties)));
     }
 
     private static long retryAfterMillis(String value) {
