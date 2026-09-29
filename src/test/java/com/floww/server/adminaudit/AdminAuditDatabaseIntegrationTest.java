@@ -2,7 +2,6 @@ package com.floww.server.adminaudit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,6 +15,7 @@ import com.floww.server.auth.domain.UserStatus;
 import com.floww.server.auth.infrastructure.JwtProvider;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,7 +113,9 @@ class AdminAuditDatabaseIntegrationTest {
         assertEquals(2, nextPage.path("total").asInt());
         assertFalse(firstPage.path("tasks").get(0).path("taskId").asText()
                 .equals(nextPage.path("tasks").get(0).path("taskId").asText()));
-        assertNotNull(second);
+        assertEquals(Set.of(task.toString(), second.toString()), Set.of(
+                firstPage.path("tasks").get(0).path("taskId").asText(),
+                nextPage.path("tasks").get(0).path("taskId").asText()));
 
         JsonNode detail = json.readTree(call(base + "/" + task, admin).getBody());
         assertEquals(attempt.toString(), detail.path("attempts").get(0).path("attemptId").asText());
