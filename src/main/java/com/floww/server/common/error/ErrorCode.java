@@ -1,7 +1,11 @@
 package com.floww.server.common.error;
 
 import java.util.Optional;
+
+import org.junit.Test;
 import org.springframework.http.HttpStatus;
+
+import static org.junit.Assert.*;
 
 /**
  * Floww 서버 공통 에러 코드 — Issue #13 (Common: Error Handling).
@@ -47,6 +51,28 @@ public enum ErrorCode {
             "요청 본문을 해석할 수 없습니다", "Malformed request body"),
     UNAUTHORIZED(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
             "인증이 필요합니다", "Authentication required"),
+
+    // ─────────────── AUTH (Issue #22, AUTH-00·05·06·11) ───────────────
+    /**
+     * 로그인 실패 공통 코드. 이메일 없음, 비밀번호 틀림, 어드민 경로에 USER 계정 로그인을
+     * 모두 이 코드 하나로 응답해 계정 존재 여부·권한을 드러내지 않는다.
+     * 토큰 없음·만료·위조는 {@link #UNAUTHORIZED}를 쓴다.
+     */
+    INVALID_CREDENTIALS(Category.HTTP, HttpStatus.UNAUTHORIZED, false,
+            "이메일 또는 비밀번호가 올바르지 않습니다", "Invalid email or password"),
+    /** 회원가입 시 이미 가입된 이메일 (소문자 정규화 후 비교). */
+    EMAIL_ALREADY_EXISTS(Category.HTTP, HttpStatus.CONFLICT, false,
+            "이미 가입된 이메일입니다", "Email already registered"),
+    /** 비밀번호 규칙 위반. 규칙은 팀 합의 후 확정한다. 응답·로그에 비밀번호 원문을 넣지 않는다. */
+    WEAK_PASSWORD(Category.HTTP, HttpStatus.BAD_REQUEST, false,
+            "비밀번호가 규칙에 맞지 않습니다", "Password does not meet requirements"),
+    /** 인증은 되었지만 권한 부족. 예: client 토큰(또는 role≠ADMIN)으로 /api/v1/admin/** 호출. */
+    FORBIDDEN(Category.HTTP, HttpStatus.FORBIDDEN, false,
+            "접근 권한이 없습니다", "Access denied"),
+    /** 정지된 계정. 비밀번호 검증을 통과한 뒤에만 응답한다 (계정 존재 여부 노출 방지). */
+    USER_SUSPENDED(Category.HTTP, HttpStatus.FORBIDDEN, false,
+            "정지된 계정입니다", "Account suspended"),
+
     /**
      * SA 6장 감사·데이터 접근: 작업 소유자는 자기 기록만 조회한다.
      * 타인 소유 실행도 403이 아니라 404로 응답해 존재 여부를 드러내지 않는다.
