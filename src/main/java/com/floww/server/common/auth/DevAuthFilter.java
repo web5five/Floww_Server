@@ -1,6 +1,8 @@
-package com.floww.server;
+package com.floww.server.common.auth;
 
 import com.floww.server.aidraft.AiDraftHttpController;
+import com.floww.server.common.error.ErrorCode;
+import com.floww.server.common.error.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -9,8 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -47,10 +49,15 @@ public class DevAuthFilter extends OncePerRequestFilter {
         String supplied = header != null && header.startsWith("Bearer ") ? header.substring(7) : "";
         String owner = equal(supplied, aliceToken) ? "alice" : equal(supplied, bobToken) ? "bob" : null;
         if (owner == null) {
-            response.setStatus(401);
-            response.setContentType("application/json");
-            mapper.writeValue(response.getOutputStream(), request.getRequestURI().equals("/api/ai/drafts")
-                    ? AiDraftHttpController.unauthorizedBody() : Map.of("code", "UNAUTHORIZED"));
+            // 필터는 @RestControllerAdvice를 거치지 않으므로 공통 ErrorResponse를 직접 쓴다 (Issue #13, SA 7장).
+            // /api/ai/drafts는 F010 계약의 자체 envelope를 유지한다.
+            // 한국어 메시지가 있으므로 charset을 명시한다.
+            response.setStatus(ErrorCode.UNAUTHORIZED.httpStatus().value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            Object body = request.getRequestURI().equals("/api/ai/drafts")
+                    ? AiDraftHttpController.unauthorizedBody() : ErrorResponse.of(ErrorCode.UNAUTHORIZED);
+            mapper.writeValue(response.getOutputStream(), body);
             return;
         }
         request.setAttribute("owner", owner);

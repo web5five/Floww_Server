@@ -1,8 +1,8 @@
 package com.floww.f010test;
 
-import com.floww.server.DevAuthFilter;
-import com.floww.server.KilnClient;
 import com.floww.server.aidraft.AiDraftHttpController;
+import com.floww.server.common.auth.DevAuthFilter;
+import com.floww.server.integration.kiln.KilnClient;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;

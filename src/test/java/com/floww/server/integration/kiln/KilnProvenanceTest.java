@@ -1,4 +1,4 @@
-package com.floww.server;
+package com.floww.server.integration.kiln;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

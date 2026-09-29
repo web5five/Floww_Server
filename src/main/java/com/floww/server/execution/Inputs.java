@@ -1,5 +1,7 @@
-package com.floww.server;
+package com.floww.server.execution;
 
+import com.floww.server.common.error.ApiException;
+import com.floww.server.common.error.ErrorCode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
@@ -9,7 +11,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.regex.Pattern;
-import org.springframework.http.HttpStatus;
 
 public final class Inputs {
     private static final Pattern AMOUNT = Pattern.compile("(?:0|[1-9][0-9]{0,11})(?:\\.[0-9]{1,8})?");
@@ -95,6 +96,6 @@ public final class Inputs {
     }
 
     private static ApiException invalid() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INPUT");
+        return new ApiException(ErrorCode.INVALID_INPUT);
     }
 }

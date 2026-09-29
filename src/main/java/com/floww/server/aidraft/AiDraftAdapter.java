@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.floww.server.KilnClient;
+import com.floww.server.integration.kiln.KilnClient;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
