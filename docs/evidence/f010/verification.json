@@ -1,0 +1,192 @@
+{
+  "task": "F010",
+  "baseCommit": "bc5d7aa74bdb2a7ea52f7df67958488cfeb48806",
+  "contractVersion": "ai-draft-http.v1",
+  "command": "./mvnw -B -o verify",
+  "javaMajor": 21,
+  "testCount": 60,
+  "suites": [
+    {
+      "suite": "com.floww.server.ExecutionIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.KilnProvenanceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.MerchantGatewayTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.AiDraftEvaluationTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.AiDraftHttpIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.AiDraftHttpNoProviderTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ControllerDraftBoundaryTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ControllerReviewBindingTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ReviewConfirmationBindingTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "newHttpTests": 5,
+  "packagedHttp": {
+    "task": "F010",
+    "kind": "packaged_http_local_fixture",
+    "observedAt": "2026-09-29T03:08:31.195793+00:00",
+    "jarSha256": "bb18750f14caa8fc6f0f93338ac45739a9eb4ea8049bc370850f19eca0eaa47b",
+    "checks": [
+      {
+        "check": "anonymous blocked and no-store",
+        "passed": true
+      },
+      {
+        "check": "invalid input 0 rejected before provider",
+        "passed": true
+      },
+      {
+        "check": "invalid input 1 rejected before provider",
+        "passed": true
+      },
+      {
+        "check": "invalid input 2 rejected before provider",
+        "passed": true
+      },
+      {
+        "check": "invalid input 3 rejected before provider",
+        "passed": true
+      },
+      {
+        "check": "real chunked oversize before provider",
+        "passed": true
+      },
+      {
+        "check": "media type before provider",
+        "passed": true
+      },
+      {
+        "check": "incomplete draft returns clarification",
+        "passed": true
+      },
+      {
+        "check": "clarification follow-up becomes reviewable",
+        "passed": true
+      },
+      {
+        "check": "model remains proposal-only",
+        "passed": true
+      },
+      {
+        "check": "provider only offered draft tool",
+        "passed": true
+      },
+      {
+        "check": "system boundary and final user preserved",
+        "passed": true
+      },
+      {
+        "check": "local provenance and usage honest",
+        "passed": true
+      },
+      {
+        "check": "success is cache-disabled",
+        "passed": true
+      },
+      {
+        "check": "no credentials in response",
+        "passed": true
+      }
+    ],
+    "providerCalls": 2,
+    "modelEvidenceMode": "local_model_fixture",
+    "liveKiln": false,
+    "walletApproval": false,
+    "payment": false
+  },
+  "liveHttp": {
+    "task": "F010",
+    "kind": "live_kiln_through_packaged_http",
+    "observedAt": "2026-09-29T03:09:03.588934+00:00",
+    "jarSha256": "bb18750f14caa8fc6f0f93338ac45739a9eb4ea8049bc370850f19eca0eaa47b",
+    "httpRequests": 1,
+    "httpStatus": 200,
+    "proposalStatus": "READY_FOR_REVIEW",
+    "error": null,
+    "modelEvidence": {
+      "modelId": "qwen3-32b",
+      "modelEvidenceMode": "kiln",
+      "toolCallId": "call-6f80a56901e441788a65648be8e872ce",
+      "generationId": "750b3627-5512-43f7-bc62-4fa95a4b6faf",
+      "usageStatus": "reported",
+      "usage": {
+        "prompt_tokens": 557,
+        "completion_tokens": 613,
+        "total_tokens": 1170
+      },
+      "cost": null,
+      "attempts": 1
+    },
+    "cacheControl": "no-store, no-store",
+    "inputCategory": "synthetic public-weather CSV request, no private data",
+    "realUserApprovalVerified": false,
+    "walletPaymentOrFulfillmentVerified": false,
+    "passed": true,
+    "verificationNote": "The initial probe compared the entire Cache-Control value to one string. Both filter and controller emit the same no-store directive; parsing the valid combined directive list passes. No product source change or additional model call was needed; original observation retained locally."
+  },
+  "sourceSha256": {
+    "src/main/java/com/floww/server/DevAuthFilter.java": "37846df98217425890ed7527f24a46ff95894ee824f502003890d26d5d83273f",
+    "src/main/java/com/floww/server/aidraft/AiDraftHttpController.java": "f585a6018a22e69e7df90c6807bc1a057b6d897c320cf6c795941e3677797984",
+    "src/test/java/com/floww/f010test/F010HttpTestApplication.java": "c30c7dfd2dd1cb736d0483727f77b1ecb3d5d2ce4f088306bad59f14e1b8c385",
+    "src/test/java/com/floww/server/aidraft/AiDraftHttpIntegrationTest.java": "4f9c4a189ef31126bd19eab3e8da04a9d62d7cb8ba1ad28d7c27a4b0f40643b9",
+    "src/test/java/com/floww/server/aidraft/AiDraftHttpNoProviderTest.java": "3e0c51f8534b4bded864a4959c59b7825c91d07cda10348f3e553b3fea0fa209"
+  },
+  "reviewer": "independent controller; AI review, not human acceptance",
+  "limitations": [
+    "Development bearer identity only, no Magic login or wallet binding.",
+    "No stored conversation, review receipt, mandate, payment or fulfillment.",
+    "The live probe uses one synthetic request and does not establish general model accuracy.",
+    "HTTP retries may incur another inference charge; no idempotency guarantee.",
+    "End-to-end integration and domain-owner acceptance remain pending."
+  ]
+}

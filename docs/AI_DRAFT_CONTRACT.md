@@ -1,10 +1,10 @@
 # F008 AI draft clarification contract / AI 초안 확인 계약
 
-**Status / 상태:** candidate `ai-draft.v1` component contract; proposal only. Product, frontend, core backend, auth and payment owners have not accepted an integration API. This module has no HTTP endpoint or durable task state. / 제안 단계의 컴포넌트 계약이며 연동 API는 담당자 합의 전입니다. HTTP 엔드포인트와 영속 Task 상태가 없습니다.
+**Status / 상태:** candidate `ai-draft.v1` component contract; proposal only. F010 now exposes the pure helper through a [development HTTP transport](AI_DRAFT_HTTP.md), while product, frontend, core backend, auth and payment owners have not accepted a production integration API. This module has no durable task state. / 제안 단계의 컴포넌트 계약입니다. F010 개발용 HTTP 경로가 추가되었지만 제품 연동 계약과 영속 Task 상태는 아직 없습니다.
 
 ## Input and output / 입력과 출력
 
-An application passes a bounded `AiDraftAdapter.Turn` list (one to twelve turns, user or assistant role only, final turn user, 4,000 characters per turn and 16,000 total). It cannot pass a system role, tools or an approved mandate. This JSON is an illustrative application-side request, **not** a deployed route:
+An application passes a bounded `AiDraftAdapter.Turn` list (one to twelve turns, user or assistant role only, final turn user, 4,000 characters per turn and 16,000 total). It cannot pass a system role, tools or an approved mandate. This JSON also matches the F010 development route request; see its separate transport rules:
 
 ```json
 {"conversation":[{"role":"user","content":"Please get the specified item delivered. I can pay up to 60 USD, but I have not specified the date or fees."}]}
