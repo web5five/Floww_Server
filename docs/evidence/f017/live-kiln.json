@@ -1,0 +1,83 @@
+{
+  "task": "F017",
+  "startedAt": "2026-09-29T09:03:07.224750Z",
+  "finishedAt": "2026-09-29T09:03:12.734295Z",
+  "passed": true,
+  "inputMode": "synthetic_merchant_and_mandate_snapshots",
+  "actualProvider": "event Kiln",
+  "paymentStatus": "NOT_AVAILABLE",
+  "realUserApproval": false,
+  "merchantFulfillment": false,
+  "result": {
+    "status": "PROPOSED",
+    "reason": null,
+    "taskRef": "f017-synthetic-task",
+    "mandateRef": "f017-synthetic-mandate",
+    "mandateRevision": "1",
+    "proposedQuote": {
+      "quoteId": "f017-qa",
+      "merchantId": "A",
+      "recipient": "recipient-A",
+      "itemId": "synthetic-item",
+      "asset": {
+        "chainId": "synthetic-chain",
+        "tokenAddress": "synthetic-token",
+        "decimals": 6
+      },
+      "totalBaseUnits": "43000000",
+      "expiresAt": 1790672887.22475,
+      "inStock": true,
+      "promisedFulfillmentAt": 1790673187.22475,
+      "prescriptionRequired": true,
+      "identityRequired": false
+    },
+    "findings": [
+      {
+        "quoteId": "f017-qa",
+        "reasons": []
+      },
+      {
+        "quoteId": "f017-qb",
+        "reasons": [
+          "IDENTITY_NOT_VERIFIED"
+        ]
+      },
+      {
+        "quoteId": "f017-qc",
+        "reasons": [
+          "OVER_BUDGET"
+        ]
+      }
+    ],
+    "provenance": {
+      "modelId": "qwen3-32b",
+      "modelEvidenceMode": "kiln",
+      "finishReason": "tool_calls",
+      "toolCallId": "call-d914581631ba4c58895d37cdc9e6eee0",
+      "generationId": "25f81467-12c4-4415-bee7-6d9d4af3600d",
+      "usageStatus": "reported",
+      "usage": {
+        "prompt_tokens": 451,
+        "completion_tokens": 254,
+        "total_tokens": 705
+      },
+      "cost": null,
+      "attempts": 1
+    }
+  },
+  "checks": {
+    "missingBoundaryClarifiesBeforeProvider": true,
+    "proposed": true,
+    "originalEligibleQuote": true,
+    "sameTaskMandateRevision": true,
+    "identityCandidateExcluded": true,
+    "overBudgetCandidateExcluded": true,
+    "realKilnQwenToolCall": true,
+    "reportedUsage": true,
+    "boundedAttempts": true
+  },
+  "sourceCommit": "e6eb3abb46852a2e3bbdc7723c266550fc4c0492",
+  "jarSha256": "54a7b786f329ee968548f8cf583309f1a7255d8a2256478a201e89140d40a9e8",
+  "processExit": 0,
+  "limitation": "Synthetic snapshots; only one candidate remains eligible after deterministic filtering. This verifies tool protocol and usage, not ranking across multiple eligible options or payment."
+}
