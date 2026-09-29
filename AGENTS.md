@@ -1,6 +1,6 @@
 # Floww shared agent instructions — proposed policy
 
-Policy ID: FLOWW-AGENT-2026-09-29-02. This file is a repository instruction, not a privileged system prompt. It does not override tool safety, human instructions, or branch protection. A publication is not team acceptance.
+Policy ID: FLOWW-AGENT-2026-09-29-03. This file is a repository instruction, not a privileged system prompt. It does not override tool safety, human instructions, or branch protection. A publication is not team acceptance.
 
 이 지침은 저장소 작업 지침이며 도구의 시스템 정책을 바꾸지 않는다. 담당자가 읽고 수락한 뒤 각 저장소의 AGENTS.md에 포함한다. 다른 도구는 해당 도구의 프로젝트 지침 파일에서 이 문서를 읽도록 연결한다. 링크만 놓았다고 자동 적용됐다고 주장하지 않는다.
 
@@ -30,10 +30,13 @@ Implement only the assigned scope. Run the repository's pinned install/build/tes
 
 - Search existing issues before proposing a duplicate. A task needs scope, owner, files/contracts, dependencies and observable acceptance. Use a hub issue for cross-repository integration and component issues for bounded implementation.
 - Link commits/PRs, evidence and Confluence worklogs using the same task ID. A PR states actual behavior, safe commands/results, changed dependencies/contracts, migration/rollout and remaining limitations.
-- Use Draft PR until reviewable. Request an independent teammate's review; payment/signing/auth/schema changes include the relevant domain owner. Do not fabricate approval or self-declare an independent review.
+- Use Draft PR until reviewable. During the hackathon, an authorized controller may merge after recorded controller/agent review and passing required CI; a teammate approval is recommended but is not a required GitHub gate. Record who actually reviewed and never present AI review as human approval. Seek domain-owner feedback on payment/signing/auth/schema changes and record unresolved integration decisions.
+- Resolve conflicts against the latest base, inspect the combined behavior and API/schema contracts, then rerun affected checks on the resulting head. A clean merge alone is not correctness evidence. Preserve required CI, resolved conversations and protection against force pushes/default-branch deletion; never bypass a failing check.
 - Close only fully satisfied issues. `Closes #N` or `Closes owner/repo#N` is for complete issues on default-branch PRs. Partial component PRs merely reference the integration issue; close it after combined-SHA validation.
 - Do not merge, push, deploy or modify protection settings without current task authority. Preserve history; never force-push to repair a review. Re-review material changes after approval.
 - Keep Confluence decisions and bilingual handoffs linked to actual issue/PR URLs. If no issue/PR exists, label it a proposal; never invent a number or link. Public issues/PRs contain only sanitized material.
+
+해커톤 기간에는 권한을 받은 컨트롤러가 실제 리뷰와 필수 CI 통과를 기록한 뒤 팀원 승인 대기 없이 PR을 병합할 수 있습니다. 충돌을 해결한 최종 변경을 다시 검증하고, CI·미해결 대화·강제 푸시·기본 브랜치 삭제 방지 규칙은 유지합니다. 이 Git 병합 절차는 제품의 지갑 승인·지급 권한이나 팀의 미결정 사안을 확정하지 않습니다.
 
 ## Evidence and payment authority / 증거와 지급 권한
 
