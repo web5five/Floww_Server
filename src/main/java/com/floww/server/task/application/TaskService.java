@@ -64,6 +64,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,6 +92,8 @@ public class TaskService {
     private final ObjectMapper json;
     private final Clock clock;
     private final SecureRandom random;
+    @Value("${floww.taskaccount.enabled:false}")
+    private boolean taskAccountEnabled;
 
     @Autowired
     public TaskService(TaskRepository repo, MerchantRegistry registry, PharmacySimulator pharmacies,
@@ -193,6 +196,7 @@ public class TaskService {
     public TaskView cancel(UUID owner, UUID taskId) {
         Task task = locked(owner, taskId);
         if (task.status() != TaskStatus.ACTIVE && task.status() != TaskStatus.EXECUTING) throw invalidState(task);
+        if (repo.hasPaymentIntent(taskId)) throw new ApiException(ErrorCode.PAYMENT_UNKNOWN, taskId);
         Mandate mandate = currentMandate(task);
         repo.updateMandateStatus(mandate.id(), MandateStatus.REVOKED);
         repo.supersedeOpenAttempts(taskId);
@@ -296,6 +300,7 @@ public class TaskService {
     /** ALLOW된 attempt에 대한 typed data와 1회용 nonce 발급. 열린 요청이 있으면 같은 요청을 돌려준다. */
     @Transactional
     public ApprovalRequestView requestApproval(UUID owner, UUID taskId, UUID attemptId) {
+        if (taskAccountEnabled) throw new ApiException(ErrorCode.CHAIN_MODE_REQUIRED, taskId);
         Task task = locked(owner, taskId);
         if (task.status() != TaskStatus.AWAITING_APPROVAL) throw invalidState(task);
         Mandate mandate = currentMandate(task);
@@ -333,6 +338,7 @@ public class TaskService {
      */
     @Transactional
     public TaskView confirm(UUID owner, UUID taskId, ConfirmInput input) {
+        if (taskAccountEnabled) throw new ApiException(ErrorCode.CHAIN_MODE_REQUIRED, taskId);
         Task task = locked(owner, taskId);
         if (task.status() != TaskStatus.AWAITING_APPROVAL) throw invalidState(task);
         Mandate mandate = currentMandate(task);
@@ -496,6 +502,98 @@ public class TaskService {
         }
     }
 
+    /** Account preparation uses the same locked policy boundary as legacy approval. */
+    @Transactional
+    public AccountCandidate accountCandidate(UUID owner, UUID taskId, UUID attemptId) {
+        Task task = locked(owner, taskId);
+        if (task.status() != TaskStatus.AWAITING_APPROVAL) throw invalidState(task);
+        Mandate mandate = currentMandate(task);
+        Attempt attempt = attempt(task, attemptId);
+        if (!attempt.mandateId().equals(mandate.id()) || attempt.status() != AttemptStatus.POLICY_ALLOWED)
+            throw new ApiException(ErrorCode.APPROVAL_INVALIDATED, taskId);
+        if (mandate.chainId() != asset.chainId() || !mandate.tokenAddress().equals(asset.tokenAddress())
+                || mandate.tokenDecimals() != asset.decimals())
+            throw new ApiException(ErrorCode.APPROVAL_INVALIDATED, taskId);
+        Quote quote = repo.quote(attempt.quoteId()).orElseThrow();
+        requireStillAllowed(task, mandate, quote, attempt, clock.instant());
+        return new AccountCandidate(task, mandate, attempt, quote);
+    }
+
+    public record AccountCandidate(Task task, Mandate mandate, Attempt attempt, Quote quote) { }
+
+    @Transactional
+    public void accountApprovalReady(UUID owner, UUID taskId, UUID attemptId) {
+        Task task = locked(owner, taskId);
+        if (task.status() != TaskStatus.ACTIVE) throw invalidState(task);
+        Mandate mandate = currentMandate(task);
+        Attempt attempt = attempt(task, attemptId);
+        Quote quote = repo.quote(attempt.quoteId()).orElseThrow();
+        TaskPolicy.Decision decision = TaskPolicy.evaluate(mandate, Optional.of(quote),
+                attempt.proposedRecipient(), registry, repo.consumedBaseUnits(taskId), clock.instant());
+        if (!mandate.id().equals(attempt.mandateId()) || mandate.status() != MandateStatus.CONFIRMED
+                || attempt.status() != AttemptStatus.APPROVED
+                || !decision.allowed() || mandate.chainId() != asset.chainId()
+                || !mandate.tokenAddress().equals(asset.tokenAddress()) || mandate.tokenDecimals() != asset.decimals()
+                || !mandate.expiresAt().isAfter(clock.instant()) || !quote.expiresAt().isAfter(clock.instant())
+                || !quote.totalAmountBaseUnits().equals(attempt.amountBaseUnits())
+                || !quote.registryRecipientAddress().equals(attempt.recipientAddress()))
+            throw new ApiException(ErrorCode.APPROVAL_INVALIDATED, taskId);
+    }
+
+    /** Consume one actual contract signature as the sole mandate authority. */
+    @Transactional
+    public void confirmAccount(UUID owner, UUID taskId, UUID attemptId, String digest, String signature,
+                               String signer, String typedData) {
+        AccountCandidate c = accountCandidate(owner, taskId, attemptId);
+        if (!repo.ownerHasWallet(owner, signer)) throw new ApiException(ErrorCode.SIGNER_NOT_TASK_OWNER, taskId);
+        byte[] nonceBytes = new byte[32]; random.nextBytes(nonceBytes);
+        String internalNonce = "0x" + HexFormat.of().formatHex(nonceBytes);
+        Instant now = clock.instant();
+        repo.insertApprovalRequest(new ApprovalRequest(internalNonce, taskId, attemptId, c.mandate().id(),
+                typedData, digest, c.quote().expiresAt(), now, null));
+        if (!repo.consumeNonce(internalNonce)) throw new ApiException(ErrorCode.APPROVAL_NONCE_INVALID, taskId);
+        repo.insertApproval(new Approval(UUID.randomUUID(), taskId, c.mandate().id(), attemptId,
+                internalNonce, METHOD_EIP712, digest, signature.toLowerCase(Locale.ROOT), signer, now), typedData);
+        repo.confirmMandate(c.mandate().id(), METHOD_EIP712, digest);
+        repo.updateAttemptStatus(attemptId, AttemptStatus.APPROVED);
+        repo.appendEvent(taskId, attemptId, "MANDATE_CONFIRMED", TaskStatus.ACTIVE.name(), null, "user",
+                Map.of("method", "FlowwTaskAccount.MandateApproval", "digest", digest));
+        transition(c.task(), TaskStatus.ACTIVE, null);
+    }
+
+    /** Final payment guard after the order reserved cumulative budget. */
+    @Transactional
+    public Order accountPaymentOrder(UUID owner, UUID taskId, UUID attemptId) {
+        Task task = locked(owner, taskId);
+        if (task.status() != TaskStatus.EXECUTING) throw invalidState(task);
+        Mandate mandate = currentMandate(task);
+        Attempt attempt = attempt(task, attemptId);
+        Order order = repo.orders(taskId).stream().filter(o -> o.attemptId().equals(attemptId)).findFirst()
+                .orElseThrow(() -> new ApiException(ErrorCode.APPROVAL_INVALIDATED, taskId));
+        Quote quote = repo.quote(order.quoteId()).orElseThrow();
+        BigInteger consumedExcludingThisOrder = repo.consumedBaseUnits(taskId).subtract(order.amountBaseUnits());
+        TaskPolicy.Decision decision = TaskPolicy.evaluate(mandate, Optional.of(quote),
+                attempt.proposedRecipient(), registry, consumedExcludingThisOrder, clock.instant());
+        if (mandate.status() != MandateStatus.CONFIRMED || !mandate.id().equals(attempt.mandateId())
+                || attempt.status() != AttemptStatus.ORDERED || attempt.decision() != PolicyDecision.ALLOW
+                || !decision.allowed() || consumedExcludingThisOrder.signum() < 0
+                || mandate.chainId() != asset.chainId() || !mandate.tokenAddress().equals(asset.tokenAddress())
+                || mandate.tokenDecimals() != asset.decimals()
+                || !mandate.expiresAt().isAfter(clock.instant()) || !quote.expiresAt().isAfter(clock.instant())
+                || !order.amountBaseUnits().equals(quote.totalAmountBaseUnits())
+                || !order.recipientAddress().equals(quote.registryRecipientAddress())
+                || repo.consumedBaseUnits(taskId).compareTo(mandate.budgetBaseUnits()) > 0)
+            throw new ApiException(ErrorCode.APPROVAL_INVALIDATED, taskId);
+        return order;
+    }
+
+    @Transactional
+    public void completeAccount(UUID owner, UUID taskId) {
+        Task task = locked(owner, taskId);
+        if (task.status() != TaskStatus.EXECUTING) throw invalidState(task);
+        transition(task, TaskStatus.COMPLETED, null);
+    }
+
     private boolean candidatesExhausted(Task task, Mandate mandate) {
         List<Attempt> attempts = repo.attempts(task.id());
         if (attempts.size() >= MAX_ATTEMPTS) return true;
@@ -602,7 +700,9 @@ public class TaskService {
                     a.proposedQuoteRef(), quote.map(Quote::merchantId).orElse(null), a.proposedBy(), a.status().name(),
                     BaseUnits.format(a.amountBaseUnits()), a.recipientAddress(), PolicyView.of(a),
                     ApprovalView.of(repo.approvalForAttempt(a.id()).orElse(null)),
-                    order == null ? null : OrderView.of(order, a.proposedQuoteRef()), PaymentView.NOT_ATTEMPTED,
+                    order == null ? null : OrderView.of(order, a.proposedQuoteRef()),
+                    order == null ? PaymentView.NOT_ATTEMPTED
+                            : new PaymentView(order.paymentStatus(), repo.paymentTxForAttempt(a.id())),
                     a.startedAt()));
         }
         return views;

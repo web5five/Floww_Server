@@ -290,6 +290,22 @@ public class TaskRepository {
                 ORDER, taskId);
     }
 
+    public void updateOrderPayment(UUID attemptId, String status) {
+        db.update("UPDATE merchant_orders SET payment_status = ? WHERE attempt_id = ?", status, attemptId);
+    }
+
+    public String paymentTxForAttempt(UUID attemptId) {
+        List<String> hashes = db.query("SELECT payment_tx_hash FROM task_accounts WHERE attempt_id = ?",
+                (rs, row) -> rs.getString(1), attemptId);
+        return hashes.isEmpty() ? null : hashes.getFirst();
+    }
+
+    public boolean hasPaymentIntent(UUID taskId) {
+        Integer count = db.queryForObject("SELECT count(*) FROM task_accounts WHERE task_id = ? "
+                + "AND state IN ('PAYMENT_UNKNOWN','PAID','FULFILLMENT_UNKNOWN','COMPLETED')", Integer.class, taskId);
+        return count != null && count > 0;
+    }
+
     /** Task 전체 누적 지출(예약 포함). 취소되지 않은 주문 금액의 합. */
     public BigInteger consumedBaseUnits(UUID taskId) {
         BigDecimal sum = db.queryForObject("SELECT COALESCE(sum(amount_base_units), 0) FROM merchant_orders "
