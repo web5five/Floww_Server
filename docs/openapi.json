@@ -1,0 +1,2003 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Floww Server implemented HTTP surface (F011 candidate handoff)",
+    "version": "13210e8-F011",
+    "description": "Code-derived development contract. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. No wallet, signing, payment, fulfillment or real-user acceptance."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Default local binding"
+    }
+  ],
+  "security": [
+    {
+      "DevelopmentBearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Operational"
+    },
+    {
+      "name": "AI proposal"
+    },
+    {
+      "name": "Legacy local precheck"
+    }
+  ],
+  "paths": {
+    "/actuator/health": {
+      "get": {
+        "tags": [
+          "Operational"
+        ],
+        "summary": "Process and database health only",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "UP"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Actuator unhealthy; framework/Actuator body may vary"
+          }
+        }
+      }
+    },
+    "/api/integrations/readiness": {
+      "get": {
+        "tags": [
+          "Operational"
+        ],
+        "summary": "Configured flags, not reachability or payment readiness",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                },
+                "example": {
+                  "kilnConfigured": false,
+                  "merchantConfigured": false,
+                  "merchantMode": "unavailable",
+                  "paymentConfigured": false,
+                  "processHealthIsIntegrationProof": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/drafts": {
+      "post": {
+        "tags": [
+          "AI proposal"
+        ],
+        "summary": "Candidate development AI draft proposal; no authority or persistence",
+        "description": "Strict UTF-8 JSON <= 131072 bytes; duplicate/trailing JSON and unknown fields rejected. Final conversation turn must be user. No HTTP idempotency. Mapped responses use Cache-Control: no-store.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiDraftRequest"
+              },
+              "example": {
+                "conversation": [
+                  {
+                    "role": "user",
+                    "content": "Draft one paperback scope with an all-fee maximum of 60 USD by 2099-01-01T00:00:00Z."
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reviewable or clarification proposal, never approval",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "examples": {
+                  "reviewable": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "READY_FOR_REVIEW",
+                      "draft": {
+                        "schemaVersion": "ai-draft.v1",
+                        "objective": "Get one paperback delivered",
+                        "itemScope": "One specified paperback",
+                        "providerCriteria": "Authorized bookstore",
+                        "maximumTotalCost": {
+                          "amount": "60",
+                          "asset": "USD",
+                          "includesAllUserPaidFees": true
+                        },
+                        "deadline": "2099-01-01T00:00:00Z",
+                        "fulfillmentCriterion": "Delivery recorded at the specified address"
+                      },
+                      "issues": [],
+                      "evidence": {
+                        "modelId": "qwen3-32b",
+                        "modelEvidenceMode": "local_model_fixture",
+                        "toolCallId": "fixture-call",
+                        "generationId": "fixture-generation",
+                        "usageStatus": "reported",
+                        "usage": {
+                          "prompt_tokens": 8,
+                          "completion_tokens": 6,
+                          "total_tokens": 14
+                        },
+                        "cost": null,
+                        "attempts": 1
+                      },
+                      "error": null
+                    }
+                  },
+                  "clarification": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "NEEDS_CLARIFICATION",
+                      "draft": {
+                        "schemaVersion": "ai-draft.v1",
+                        "objective": "Get one paperback delivered",
+                        "itemScope": "One specified paperback",
+                        "providerCriteria": "Authorized bookstore",
+                        "maximumTotalCost": null,
+                        "deadline": "2099-01-01T00:00:00Z",
+                        "fulfillmentCriterion": "Delivery recorded at the specified address"
+                      },
+                      "issues": [
+                        {
+                          "code": "COST_MISSING",
+                          "field": "maximumTotalCost",
+                          "question": "What is the maximum total you will pay, in which asset, including every fee charged to you?"
+                        }
+                      ],
+                      "evidence": {
+                        "modelId": "qwen3-32b",
+                        "modelEvidenceMode": "local_model_fixture",
+                        "toolCallId": "fixture-call",
+                        "generationId": "fixture-generation",
+                        "usageStatus": "reported",
+                        "usage": {
+                          "prompt_tokens": 8,
+                          "completion_tokens": 6,
+                          "total_tokens": 14
+                        },
+                        "cost": null,
+                        "attempts": 1
+                      },
+                      "error": null
+                    }
+                  },
+                  "clarificationBlankCost": {
+                    "summary": "Unresolved blank cost fields are clarification, not approval",
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "NEEDS_CLARIFICATION",
+                      "draft": {
+                        "schemaVersion": "ai-draft.v1",
+                        "objective": "Get one paperback delivered",
+                        "itemScope": "One specified paperback",
+                        "providerCriteria": "Authorized bookstore",
+                        "maximumTotalCost": {
+                          "amount": "",
+                          "asset": "",
+                          "includesAllUserPaidFees": null
+                        },
+                        "deadline": "2099-01-01T00:00:00Z",
+                        "fulfillmentCriterion": "Delivery recorded at the specified address"
+                      },
+                      "issues": [
+                        {
+                          "code": "COST_AMOUNT_MISSING",
+                          "field": "maximumTotalCost.amount",
+                          "question": "What is the exact maximum total amount?"
+                        },
+                        {
+                          "code": "COST_ASSET_MISSING",
+                          "field": "maximumTotalCost.asset",
+                          "question": "Which asset or currency is this amount in?"
+                        },
+                        {
+                          "code": "COST_FEES_UNRESOLVED",
+                          "field": "maximumTotalCost.includesAllUserPaidFees",
+                          "question": "Does this maximum include every charge and fee you pay?"
+                        }
+                      ],
+                      "evidence": {
+                        "modelId": "qwen3-32b",
+                        "modelEvidenceMode": "local_model_fixture",
+                        "toolCallId": "fixture-call",
+                        "generationId": "fixture-generation",
+                        "usageStatus": "reported",
+                        "usage": {
+                          "prompt_tokens": 8,
+                          "completion_tokens": 6,
+                          "total_tokens": 14
+                        },
+                        "cost": null,
+                        "attempts": 1
+                      },
+                      "error": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "examples": {
+                  "INVALID_REQUEST": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "ERROR",
+                      "draft": null,
+                      "issues": [],
+                      "evidence": null,
+                      "error": {
+                        "code": "INVALID_REQUEST"
+                      }
+                    }
+                  },
+                  "INVALID_CONVERSATION": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "ERROR",
+                      "draft": null,
+                      "issues": [],
+                      "evidence": null,
+                      "error": {
+                        "code": "INVALID_CONVERSATION"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "example": {
+                  "httpContractVersion": "ai-draft-http.v1",
+                  "status": "ERROR",
+                  "draft": null,
+                  "issues": [],
+                  "evidence": null,
+                  "error": {
+                    "code": "UNAUTHORIZED"
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "REQUEST_TOO_LARGE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "example": {
+                  "httpContractVersion": "ai-draft-http.v1",
+                  "status": "ERROR",
+                  "draft": null,
+                  "issues": [],
+                  "evidence": null,
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE"
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "UNSUPPORTED_MEDIA_TYPE",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "example": {
+                  "httpContractVersion": "ai-draft-http.v1",
+                  "status": "ERROR",
+                  "draft": null,
+                  "issues": [],
+                  "evidence": null,
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "MODEL_PROPOSAL_FAILED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "examples": {
+                  "MODEL_PROPOSAL_FAILED": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "ERROR",
+                      "draft": null,
+                      "issues": [],
+                      "evidence": null,
+                      "error": {
+                        "code": "MODEL_PROPOSAL_FAILED"
+                      }
+                    }
+                  },
+                  "MODEL_PROPOSAL_INVALID": {
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "ERROR",
+                      "draft": null,
+                      "issues": [],
+                      "evidence": null,
+                      "error": {
+                        "code": "MODEL_PROPOSAL_INVALID"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "PROVIDER_NOT_CONFIGURED",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "example": {
+                  "httpContractVersion": "ai-draft-http.v1",
+                  "status": "ERROR",
+                  "draft": null,
+                  "issues": [],
+                  "evidence": null,
+                  "error": {
+                    "code": "PROVIDER_NOT_CONFIGURED"
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "PROVIDER_TIMEOUT",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "no-store for mapped responses"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiEnvelope"
+                },
+                "example": {
+                  "httpContractVersion": "ai-draft-http.v1",
+                  "status": "ERROR",
+                  "draft": null,
+                  "issues": [],
+                  "evidence": null,
+                  "error": {
+                    "code": "PROVIDER_TIMEOUT"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions": {
+      "post": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Create local confirmed-mandate fixture; not AI draft approval",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExecutionRequest"
+              },
+              "example": {
+                "confirmed": true,
+                "mandate": {
+                  "goal": "Get one sample item",
+                  "itemId": "item-1",
+                  "maxTotal": "10.00",
+                  "currency": "TEST_USDC",
+                  "recipient": "merchant_good",
+                  "expiresAt": "2099-01-01T00:00:00Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution"
+                },
+                "example": {
+                  "id": "11111111-1111-4111-8111-111111111111",
+                  "ownerId": "alice",
+                  "status": "CREATED",
+                  "mandate": {
+                    "goal": "Get one sample item",
+                    "itemId": "item-1",
+                    "maxTotal": "10.00",
+                    "currency": "TEST_USDC",
+                    "recipient": "merchant_good",
+                    "expiresAt": "2099-01-01T00:00:00Z"
+                  },
+                  "createdAt": "2026-09-29T00:00:00Z",
+                  "updatedAt": "2026-09-29T00:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "INVALID_INPUT"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "IDEMPOTENCY_CONFLICT"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Latest executions as a bounded array, no cursor",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionList"
+                },
+                "example": [
+                  {
+                    "id": "11111111-1111-4111-8111-111111111111",
+                    "ownerId": "alice",
+                    "status": "CREATED",
+                    "mandate": {
+                      "goal": "Get one sample item",
+                      "itemId": "item-1",
+                      "maxTotal": "10.00",
+                      "currency": "TEST_USDC",
+                      "recipient": "merchant_good",
+                      "expiresAt": "2099-01-01T00:00:00Z"
+                    },
+                    "createdAt": "2026-09-29T00:00:00Z",
+                    "updatedAt": "2026-09-29T00:00:00Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_LIMIT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "INVALID_LIMIT"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions/history": {
+      "get": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Owner history using created_at,id descending cursor",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                },
+                "example": {
+                  "executions": [
+                    {
+                      "id": "11111111-1111-4111-8111-111111111111",
+                      "ownerId": "alice",
+                      "status": "CREATED",
+                      "mandate": {
+                        "goal": "Get one sample item",
+                        "itemId": "item-1",
+                        "maxTotal": "10.00",
+                        "currency": "TEST_USDC",
+                        "recipient": "merchant_good",
+                        "expiresAt": "2099-01-01T00:00:00Z"
+                      },
+                      "createdAt": "2026-09-29T00:00:00Z",
+                      "updatedAt": "2026-09-29T00:00:00Z"
+                    }
+                  ],
+                  "nextCursor": "11111111-1111-4111-8111-111111111111",
+                  "hasMore": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_LIMIT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "INVALID_LIMIT"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EXECUTION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "EXECUTION_NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions/{id}": {
+      "get": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Owner execution detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution"
+                },
+                "example": {
+                  "id": "11111111-1111-4111-8111-111111111111",
+                  "ownerId": "alice",
+                  "status": "CREATED",
+                  "mandate": {
+                    "goal": "Get one sample item",
+                    "itemId": "item-1",
+                    "maxTotal": "10.00",
+                    "currency": "TEST_USDC",
+                    "recipient": "merchant_good",
+                    "expiresAt": "2099-01-01T00:00:00Z"
+                  },
+                  "createdAt": "2026-09-29T00:00:00Z",
+                  "updatedAt": "2026-09-29T00:00:00Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EXECUTION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "EXECUTION_NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions/{id}/run": {
+      "post": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Claim once and run local quote-policy precheck; terminal failure can return 200",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution"
+                },
+                "example": {
+                  "id": "11111111-1111-4111-8111-111111111111",
+                  "ownerId": "alice",
+                  "status": "FAILED",
+                  "mandate": {
+                    "goal": "Get one sample item",
+                    "itemId": "item-1",
+                    "maxTotal": "10.00",
+                    "currency": "TEST_USDC",
+                    "recipient": "merchant_good",
+                    "expiresAt": "2099-01-01T00:00:00Z"
+                  },
+                  "createdAt": "2026-09-29T00:00:00Z",
+                  "updatedAt": "2026-09-29T00:00:01Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EXECUTION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "EXECUTION_NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ALREADY_RUN when claim cannot start; NOT_RUNNING if final status transition loses its RUNNING state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "examples": {
+                  "alreadyRun": {
+                    "value": {
+                      "code": "ALREADY_RUN"
+                    }
+                  },
+                  "notRunning": {
+                    "value": {
+                      "code": "NOT_RUNNING"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions/{id}/events": {
+      "get": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Owner evidence events by seq cursor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                },
+                "example": {
+                  "events": [
+                    {
+                      "seq": 1,
+                      "schemaVersion": 2,
+                      "kind": "MANDATE_CONFIRMED",
+                      "actor": "user",
+                      "source": "floww_server",
+                      "correlationId": "11111111-1111-4111-8111-111111111111",
+                      "toolCallId": null,
+                      "evidenceMode": "mandate",
+                      "modelEvidenceMode": null,
+                      "payload": {
+                        "goal": "Get one sample item",
+                        "itemId": "item-1",
+                        "maxTotal": "10.00",
+                        "currency": "TEST_USDC",
+                        "recipient": "merchant_good",
+                        "expiresAt": "2099-01-01T00:00:00Z"
+                      },
+                      "createdAt": "2026-09-29T00:00:00Z"
+                    }
+                  ],
+                  "nextCursor": 1,
+                  "hasMore": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_CURSOR or INVALID_LIMIT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "examples": {
+                  "cursor": {
+                    "value": {
+                      "code": "INVALID_CURSOR"
+                    }
+                  },
+                  "limit": {
+                    "value": {
+                      "code": "INVALID_LIMIT"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EXECUTION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "EXECUTION_NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/executions/{id}/evidence.json": {
+      "get": {
+        "tags": [
+          "Legacy local precheck"
+        ],
+        "summary": "Download owner-only evidence; completeness is not payment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "floww-evidence-2 export",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "attachment; filename=floww-evidence-{id}.json"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceExport"
+                },
+                "example": {
+                  "format": "floww-evidence-2",
+                  "execution": {
+                    "id": "11111111-1111-4111-8111-111111111111",
+                    "ownerId": "alice",
+                    "status": "CREATED",
+                    "mandate": {
+                      "goal": "Get one sample item",
+                      "itemId": "item-1",
+                      "maxTotal": "10.00",
+                      "currency": "TEST_USDC",
+                      "recipient": "merchant_good",
+                      "expiresAt": "2099-01-01T00:00:00Z"
+                    },
+                    "createdAt": "2026-09-29T00:00:00Z",
+                    "updatedAt": "2026-09-29T00:00:00Z"
+                  },
+                  "events": {
+                    "events": [
+                      {
+                        "seq": 1,
+                        "schemaVersion": 2,
+                        "kind": "MANDATE_CONFIRMED",
+                        "actor": "user",
+                        "source": "floww_server",
+                        "correlationId": "11111111-1111-4111-8111-111111111111",
+                        "toolCallId": null,
+                        "evidenceMode": "mandate",
+                        "modelEvidenceMode": null,
+                        "payload": {
+                          "goal": "Get one sample item",
+                          "itemId": "item-1",
+                          "maxTotal": "10.00",
+                          "currency": "TEST_USDC",
+                          "recipient": "merchant_good",
+                          "expiresAt": "2099-01-01T00:00:00Z"
+                        },
+                        "createdAt": "2026-09-29T00:00:00Z"
+                      }
+                    ],
+                    "nextCursor": 1,
+                    "hasMore": false
+                  },
+                  "complete": false,
+                  "pageComplete": true,
+                  "nextCursor": 1,
+                  "evidenceMode": "no_merchant_quote",
+                  "modelEvidenceMode": "none",
+                  "modelUsage": {
+                    "status": "none",
+                    "attempts": 0
+                  },
+                  "progressLabel": "Mandate recorded",
+                  "paymentStatus": "NOT_AVAILABLE"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_CURSOR or INVALID_LIMIT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "examples": {
+                  "cursor": {
+                    "value": {
+                      "code": "INVALID_CURSOR"
+                    }
+                  },
+                  "limit": {
+                    "value": {
+                      "code": "INVALID_LIMIT"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "EXECUTION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyError"
+                },
+                "example": {
+                  "code": "EXECUTION_NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "DevelopmentBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Server-side local development token maps to alice or bob; not browser/Magic/wallet auth."
+      }
+    },
+    "schemas": {
+      "LegacyError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "AiError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "Mandate": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "description": "Trimmed by server; nonblank, <=500 Java characters, no ISO control characters."
+          },
+          "itemId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+          },
+          "maxTotal": {
+            "type": "string",
+            "pattern": "^(?!0(?:\\.0{1,8})?$)(?:0|[1-9][0-9]{0,11})(?:\\.[0-9]{1,8})?$",
+            "description": "Positive JSON decimal string; numeric JSON is rejected."
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "TEST_USDC"
+            ]
+          },
+          "recipient": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{3,128}$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Must parse as Java Instant and be later than server time."
+          }
+        },
+        "required": [
+          "goal",
+          "itemId",
+          "maxTotal",
+          "currency",
+          "recipient",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateExecutionRequest": {
+        "type": "object",
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "mandate": {
+            "$ref": "#/components/schemas/Mandate"
+          }
+        },
+        "required": [
+          "confirmed",
+          "mandate"
+        ],
+        "additionalProperties": false
+      },
+      "Execution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "RUNNING",
+              "REVIEWED",
+              "REJECTED",
+              "FAILED"
+            ]
+          },
+          "mandate": {
+            "$ref": "#/components/schemas/Mandate"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ownerId",
+          "status",
+          "mandate",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ExecutionList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Execution"
+        }
+      },
+      "HistoryPage": {
+        "type": "object",
+        "properties": {
+          "executions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "executions",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "schemaVersion": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toolCallId": {
+            "type": "string",
+            "nullable": true
+          },
+          "evidenceMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelEvidenceMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seq",
+          "schemaVersion",
+          "kind",
+          "actor",
+          "source",
+          "correlationId",
+          "toolCallId",
+          "evidenceMode",
+          "modelEvidenceMode",
+          "payload",
+          "createdAt"
+        ]
+      },
+      "EventPage": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "nextCursor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "events",
+          "nextCursor",
+          "hasMore"
+        ]
+      },
+      "ModelUsageTotals": {
+        "type": "object",
+        "properties": {
+          "promptTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "completionTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "promptTokens",
+          "completionTokens",
+          "totalTokens"
+        ]
+      },
+      "ModelUsage": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "incomplete",
+              "complete"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ModelUsageTotals"
+          }
+        },
+        "required": [
+          "status",
+          "attempts"
+        ]
+      },
+      "EvidenceExport": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "floww-evidence-2"
+            ]
+          },
+          "execution": {
+            "$ref": "#/components/schemas/Execution"
+          },
+          "events": {
+            "$ref": "#/components/schemas/EventPage"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "pageComplete": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "evidenceMode": {
+            "type": "string"
+          },
+          "modelEvidenceMode": {
+            "type": "string"
+          },
+          "modelUsage": {
+            "$ref": "#/components/schemas/ModelUsage"
+          },
+          "progressLabel": {
+            "type": "string"
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_AVAILABLE"
+            ]
+          }
+        },
+        "required": [
+          "format",
+          "execution",
+          "events",
+          "complete",
+          "pageComplete",
+          "nextCursor",
+          "evidenceMode",
+          "modelEvidenceMode",
+          "modelUsage",
+          "progressLabel",
+          "paymentStatus"
+        ]
+      },
+      "Readiness": {
+        "type": "object",
+        "properties": {
+          "kilnConfigured": {
+            "type": "boolean"
+          },
+          "merchantConfigured": {
+            "type": "boolean"
+          },
+          "merchantMode": {
+            "type": "string"
+          },
+          "paymentConfigured": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "processHealthIsIntegrationProof": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "kilnConfigured",
+          "merchantConfigured",
+          "merchantMode",
+          "paymentConfigured",
+          "processHealthIsIntegrationProof"
+        ]
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "Turn": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "AiDraftRequest": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/Turn"
+            }
+          }
+        },
+        "required": [
+          "conversation"
+        ],
+        "additionalProperties": false
+      },
+      "DraftCost": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
+            "nullable": true,
+            "maxLength": 40,
+            "description": "Null or blank means unresolved; nonblank must be an exact positive decimal string. READY_FOR_REVIEW requires a present positive amount."
+          },
+          "asset": {
+            "type": "string",
+            "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
+            "nullable": true,
+            "description": "Null or blank means unresolved; READY_FOR_REVIEW requires a present asset."
+          },
+          "includesAllUserPaidFees": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Draft": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "enum": [
+              "ai-draft.v1"
+            ]
+          },
+          "objective": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "itemScope": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "providerCriteria": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "maximumTotalCost": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
+                "nullable": true,
+                "maxLength": 40,
+                "description": "Null or blank means unresolved; nonblank must be positive exact decimal text."
+              },
+              "asset": {
+                "type": "string",
+                "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
+                "nullable": true,
+                "description": "Null or blank means unresolved."
+              },
+              "includesAllUserPaidFees": {
+                "type": "boolean",
+                "nullable": true
+              }
+            },
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "deadline": {
+            "type": "string",
+            "nullable": true
+          },
+          "fulfillmentCriterion": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "schemaVersion"
+        ],
+        "additionalProperties": false,
+        "description": "Partial model proposal; missing, null or blank fields may remain unresolved in NEEDS_CLARIFICATION. READY_FOR_REVIEW requires deterministic preflight."
+      },
+      "Issue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "field",
+          "question"
+        ]
+      },
+      "Usage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AiEvidence": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelEvidenceMode": {
+            "type": "string",
+            "enum": [
+              "kiln",
+              "local_model_fixture",
+              "unknown_model_provider"
+            ]
+          },
+          "toolCallId": {
+            "type": "string",
+            "nullable": true
+          },
+          "generationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "usageStatus": {
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "cost": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempts": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "modelId",
+          "modelEvidenceMode",
+          "toolCallId",
+          "generationId",
+          "usageStatus",
+          "usage",
+          "cost",
+          "attempts"
+        ]
+      },
+      "AiEnvelope": {
+        "type": "object",
+        "properties": {
+          "httpContractVersion": {
+            "type": "string",
+            "enum": [
+              "ai-draft-http.v1"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "READY_FOR_REVIEW",
+              "NEEDS_CLARIFICATION",
+              "ERROR"
+            ]
+          },
+          "draft": {
+            "type": "object",
+            "properties": {
+              "schemaVersion": {
+                "type": "string",
+                "enum": [
+                  "ai-draft.v1"
+                ]
+              },
+              "objective": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "itemScope": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "providerCriteria": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "maximumTotalCost": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
+                    "nullable": true,
+                    "maxLength": 40,
+                    "description": "Null or blank means unresolved; nonblank must be positive exact decimal text."
+                  },
+                  "asset": {
+                    "type": "string",
+                    "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
+                    "nullable": true,
+                    "description": "Null or blank means unresolved."
+                  },
+                  "includesAllUserPaidFees": {
+                    "type": "boolean",
+                    "nullable": true
+                  }
+                },
+                "additionalProperties": false,
+                "nullable": true
+              },
+              "deadline": {
+                "type": "string",
+                "nullable": true
+              },
+              "fulfillmentCriterion": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              }
+            },
+            "required": [
+              "schemaVersion"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "properties": {
+              "modelId": {
+                "type": "string",
+                "nullable": true
+              },
+              "modelEvidenceMode": {
+                "type": "string",
+                "enum": [
+                  "kiln",
+                  "local_model_fixture",
+                  "unknown_model_provider"
+                ]
+              },
+              "toolCallId": {
+                "type": "string",
+                "nullable": true
+              },
+              "generationId": {
+                "type": "string",
+                "nullable": true
+              },
+              "usageStatus": {
+                "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/Usage"
+              },
+              "cost": {
+                "type": "string",
+                "nullable": true
+              },
+              "attempts": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "modelId",
+              "modelEvidenceMode",
+              "toolCallId",
+              "generationId",
+              "usageStatus",
+              "usage",
+              "cost",
+              "attempts"
+            ],
+            "nullable": true
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "httpContractVersion",
+          "status",
+          "draft",
+          "issues",
+          "evidence",
+          "error"
+        ]
+      }
+    }
+  }
+}
