@@ -1,0 +1,46 @@
+{
+  "scope": "Real Solidity execution on local EVM; pure encoding compatibility only",
+  "compiler": "0.8.28+commit.7893614a.Emscripten.clang",
+  "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\ncontract ReviewReference {\nstruct Review {bytes32 taskId;bytes16 mandateId;uint256 mandateVersion;bytes16 attemptId;string merchantId;string quoteId;uint256 amountBaseUnits;address recipient;address token;uint64 quoteExpiresAt;}\nfunction encode(Review memory r) public pure returns(bytes memory) {return abi.encode(r.taskId,r.mandateId,r.mandateVersion,r.attemptId,r.merchantId,r.quoteId,r.amountBaseUnits,r.recipient,r.token,r.quoteExpiresAt);}\nfunction digest(Review memory r) external pure returns(bytes32) {return keccak256(encode(r));}\n}",
+  "fields": [
+    "taskId",
+    "mandateId",
+    "mandateVersion",
+    "attemptId",
+    "merchantId",
+    "quoteId",
+    "amountBaseUnits",
+    "recipient",
+    "token",
+    "quoteExpiresAt"
+  ],
+  "types": [
+    "bytes32",
+    "bytes16",
+    "uint256",
+    "bytes16",
+    "string",
+    "string",
+    "uint256",
+    "address",
+    "address",
+    "uint64"
+  ],
+  "normalized": {
+    "taskId": "0x4c3eed53f51c8771edb4396a4b6e1351dfe91217178808ca5a5a8f30ade7d8e2",
+    "mandateId": "0x66666666777748888999aaaaaaaaaaaa",
+    "mandateVersion": "3",
+    "attemptId": "0xbbbbbbbbcccc4ddd8eeeffffffffffff",
+    "merchantId": "pharmacy-a",
+    "quoteId": "qt_a_reference_20260930",
+    "amountBaseUnits": "23500000",
+    "recipient": "0x1234567890123456789012345678901234567890",
+    "token": "0x1390c8745eb49069afd3b89393997e3fa14614f5",
+    "quoteExpiresAt": "1790712000"
+  },
+  "encoded": "0x4c3eed53f51c8771edb4396a4b6e1351dfe91217178808ca5a5a8f30ade7d8e266666666777748888999aaaaaaaaaaaa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003bbbbbbbbcccc4ddd8eeeffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000016694e000000000000000000000000012345678901234567890123456789012345678900000000000000000000000001390c8745eb49069afd3b89393997e3fa14614f5000000000000000000000000000000000000000000000000000000006abc18c0000000000000000000000000000000000000000000000000000000000000000a706861726d6163792d6100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001771745f615f7265666572656e63655f3230323630393330000000000000000000",
+  "digest": "0xec4d825949723205fc69f22c87699d674a0bbbbb7ac3cabd813beabac584915a",
+  "checks": 3,
+  "javaExpectedDigest": "0xec4d825949723205fc69f22c87699d674a0bbbbb7ac3cabd813beabac584915a",
+  "passed": true
+}

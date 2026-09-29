@@ -1,0 +1,43 @@
+{
+  "taskId": "5665a02a-2300-4fab-866f-02a60ae57ead",
+  "denials": [
+    {
+      "id": "f3488f4f-4f3a-4f51-9c96-ada5ed8f71f2",
+      "policy_decision": "DENY",
+      "reason_code": "BUDGET_EXCEEDED",
+      "accounts": 0,
+      "signed_operations": 0
+    },
+    {
+      "id": "2a5e61b8-a455-4cc3-908d-ccaad1fc2471",
+      "policy_decision": "DENY",
+      "reason_code": "RECIPIENT_NOT_ALLOWED",
+      "accounts": 0,
+      "signed_operations": 0
+    }
+  ],
+  "operations": [
+    {
+      "kind": "APPROVAL",
+      "state": "VERIFIED",
+      "tx_hash": "0x824f7509bc62cde0faf74a4cb015281efd32f116a8570c59eed1179119f100e2",
+      "signer_address": "0xe75b54381f7fea97783d9464c94153f89ad19d38",
+      "signer_nonce": 0
+    },
+    {
+      "kind": "PAYMENT",
+      "state": "VERIFIED",
+      "tx_hash": "0x2e3110192ca84dbcafb5d6a0e925dd40cdd5fc5c700d161261afa10979281708",
+      "signer_address": "0xe75b54381f7fea97783d9464c94153f89ad19d38",
+      "signer_nonce": 1
+    },
+    {
+      "kind": "FULFILLMENT",
+      "state": "VERIFIED",
+      "tx_hash": "0x8b6af8b662b87b86896e7179483da8fe94b11c60d6494fd20c6fc198f669ba60",
+      "signer_address": "0x294ccf70e247c689f1cba6a3e4685321780fc151",
+      "signer_nonce": 0
+    }
+  ],
+  "note": "Read-only SQL; raw signed transactions, signatures, keys and credentials excluded. Denied attempts have no account or durable signed operation."
+}

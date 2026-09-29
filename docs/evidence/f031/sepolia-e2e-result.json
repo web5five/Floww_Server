@@ -1,0 +1,307 @@
+{
+  "scope": "PUBLIC_SEPOLIA_SCRIPTED_OWNER",
+  "sourceCommit": "e86e3592eeed512d4f41601a1a46108d45472a39",
+  "jarSha256": "cc58571cbe975afb7ad1335909b4a81b925c7d88925aaf4c1482c696cae7d7a2",
+  "startedAt": "2026-09-29T18:28:59.545Z",
+  "checks": [
+    "RPC is public Sepolia",
+    "token decimals independently read",
+    "owner matches supplied wallet",
+    "scripted owner signature recovered and JWT issued",
+    "Task uses actual new fUSDC token",
+    "three quotes persisted",
+    "pharmacy-b DENY",
+    "pharmacy-b reason",
+    "pharmacy-b null transaction",
+    "pharmacy-b cannot prepare account or invoke payment",
+    "pharmacy-c DENY",
+    "pharmacy-c reason",
+    "pharmacy-c null transaction",
+    "pharmacy-c cannot prepare account or invoke payment",
+    "DENY leaves public executor nonce unchanged",
+    "live model PROPOSED",
+    "Pharmacy A selected",
+    "deterministic ALLOW",
+    "ReviewSnapshot matches independent ABI reference",
+    "chain Task ID matches prefixed UUID hash",
+    "exact selected quote amount",
+    "actual merchant recipient",
+    "expiry bounded by quote",
+    "deployment bytes match pinned contract artifact",
+    "successful deploy and exact immutable binding verified",
+    "MandateApproval type",
+    "outer digest equals contract",
+    "outer digest equals ethers",
+    "server verified owner signature",
+    "chain mandate approved",
+    "resume on public Sepolia",
+    "scripted owner signature recovered and JWT issued",
+    "persisted existing approval recovered",
+    "persisted approval operation verified",
+    "exact account funding",
+    "order persisted before payment",
+    "payment remains UNKNOWN until verified",
+    "GET account exposes same durable payment hash",
+    "scripted owner signature recovered and JWT issued",
+    "same payment ID survived backend restart",
+    "same payment hash survived backend restart",
+    "retry after restart causes no new executor nonce",
+    "exact recipient transfer",
+    "not fulfilled merely by payment",
+    "payment operation confirmed",
+    "Task remains EXECUTING until fulfillment",
+    "Task projects PAID",
+    "Task projects same chain hash",
+    "chain FulfillmentConfirmed event verified",
+    "evidence hash matches chain",
+    "simulator evidence labelled",
+    "fulfillment operation confirmed",
+    "Task COMPLETED",
+    "completed payment retry no new transaction",
+    "completed fulfillment retry no new transaction"
+  ],
+  "transactions": {
+    "deploy": "0x9a5f4dc766206f0fbfc9c784d5130b1ae543697ea8b53d5b5ca8db57668d82be",
+    "approval": "0x824f7509bc62cde0faf74a4cb015281efd32f116a8570c59eed1179119f100e2",
+    "faucet": "0xaf223320ba9ed0a4688fa663167b2e723926e623c9b583d3e1c1cfa127a73d70",
+    "allowance": "0xdd2189d90e33c4111e0c4acbe772fec70daee9a782e5960da42070da6cd9e0aa",
+    "fund": "0x5b4f1ce71731980f96f6e23d2d2f846293a959050a28a04446d994880c6919af",
+    "payment": "0x2e3110192ca84dbcafb5d6a0e925dd40cdd5fc5c700d161261afa10979281708",
+    "fulfillment": "0x8b6af8b662b87b86896e7179483da8fe94b11c60d6494fd20c6fc198f669ba60"
+  },
+  "owner": "0xAB86ED8530D3E9D7FB1bAE37f5D8cA3D433bA06f",
+  "executor": "0xe75B54381f7fEa97783d9464c94153F89Ad19d38",
+  "reporter": "0x294cCF70e247c689f1cBa6A3e4685321780fC151",
+  "recipient": "0x183f66622995afD7E16479E48A98b6241858E1ea",
+  "token": "0x1390c8745Eb49069afD3b89393997e3FA14614f5",
+  "chainId": 11155111,
+  "limitation": "Scripted test owner using user-authorized key; actual public Sepolia and live Kiln. Pharmacy fulfillment is simulated and confirmed on chain; no real medicine delivery or frontend-user acceptance.",
+  "phase": "fulfillment",
+  "taskId": "5665a02a-2300-4fab-866f-02a60ae57ead",
+  "quotes": [
+    {
+      "merchantId": "pharmacy-a",
+      "quoteId": "qt_a_9235dd1863435200",
+      "amountBaseUnits": "23500000"
+    },
+    {
+      "merchantId": "pharmacy-b",
+      "quoteId": "qt_b_54ef091c95ab3fe6",
+      "amountBaseUnits": "64000000"
+    },
+    {
+      "merchantId": "pharmacy-c",
+      "quoteId": "qt_c_b25cf12cc343de9d",
+      "amountBaseUnits": "19000000"
+    }
+  ],
+  "denyAttempts": [
+    {
+      "attemptId": "f3488f4f-4f3a-4f51-9c96-ada5ed8f71f2",
+      "merchant": "pharmacy-b",
+      "reason": "BUDGET_EXCEEDED",
+      "txHash": null
+    },
+    {
+      "attemptId": "2a5e61b8-a455-4cc3-908d-ccaad1fc2471",
+      "merchant": "pharmacy-c",
+      "reason": "RECIPIENT_NOT_ALLOWED",
+      "txHash": null
+    }
+  ],
+  "denyExecutorNonce": 0,
+  "model": {
+    "modelId": "qwen3-32b",
+    "modelEvidenceMode": "kiln",
+    "finishReason": "tool_calls",
+    "toolCallId": "call-8aab3758d8ab4a298a1ec6ad262afa34",
+    "generationId": "f3c28b09-4c65-4049-9608-e98bc1beb99a",
+    "usageStatus": "reported",
+    "usage": {
+      "total_tokens": 974,
+      "completion_tokens": 397,
+      "prompt_tokens": 577
+    },
+    "cost": null,
+    "attempts": 1
+  },
+  "attemptId": "fa891230-9df2-4494-b596-b6043e4327b4",
+  "snapshot": {
+    "input": {
+      "taskId": "5665a02a-2300-4fab-866f-02a60ae57ead",
+      "mandateId": "480daa46-ca40-48d1-b306-f4d05eb91941",
+      "mandateVersion": 1,
+      "attemptId": "fa891230-9df2-4494-b596-b6043e4327b4",
+      "merchantId": "pharmacy-a",
+      "quoteId": "qt_a_9235dd1863435200",
+      "amountBaseUnits": "23500000",
+      "recipient": "0x183f66622995afd7e16479e48a98b6241858e1ea",
+      "token": "0x1390c8745eb49069afd3b89393997e3fa14614f5",
+      "quoteExpiresAt": 1790707440
+    },
+    "fields": [
+      "taskId",
+      "mandateId",
+      "mandateVersion",
+      "attemptId",
+      "merchantId",
+      "quoteId",
+      "amountBaseUnits",
+      "recipient",
+      "token",
+      "quoteExpiresAt"
+    ],
+    "types": [
+      "bytes32",
+      "bytes16",
+      "uint256",
+      "bytes16",
+      "string",
+      "string",
+      "uint256",
+      "address",
+      "address",
+      "uint64"
+    ],
+    "normalized": {
+      "taskId": "0x955ebd34d21848bc686dd1b7904b4731fcf3204bd76df60968eb57277a4c7860",
+      "mandateId": "0x480daa46ca4048d1b306f4d05eb91941",
+      "mandateVersion": "1",
+      "attemptId": "0xfa8912309df24494b596b6043e4327b4",
+      "merchantId": "pharmacy-a",
+      "quoteId": "qt_a_9235dd1863435200",
+      "amountBaseUnits": "23500000",
+      "recipient": "0x183f66622995afd7e16479e48a98b6241858e1ea",
+      "token": "0x1390c8745eb49069afd3b89393997e3fa14614f5",
+      "quoteExpiresAt": "1790707440"
+    },
+    "encoded": "0x955ebd34d21848bc686dd1b7904b4731fcf3204bd76df60968eb57277a4c7860480daa46ca4048d1b306f4d05eb91941000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001fa8912309df24494b596b6043e4327b4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000016694e0000000000000000000000000183f66622995afd7e16479e48a98b6241858e1ea0000000000000000000000001390c8745eb49069afd3b89393997e3fa14614f5000000000000000000000000000000000000000000000000000000006abc06f0000000000000000000000000000000000000000000000000000000000000000a706861726d6163792d6100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001571745f615f393233356464313836333433353230300000000000000000000000",
+    "digest": "0x09f764fb6907993a34ab0367f8932f49361be7d1601f8d3a83fbe3b5a326c2ce"
+  },
+  "account": "0x219e7bfB4C4788Fa2b35638957B53a6900bF0655",
+  "passed": true,
+  "harnessCorrection": "Approval operation is VERIFIED, not CONFIRMED; assertion corrected without changing implementation or repeating transactions.",
+  "orderId": "600333ca-a64f-4b83-aaa7-c245cc9764e2",
+  "recipientBalanceBefore": "0",
+  "paymentId": "0xfa648deab78b3fecda101e36f96dc9c54c1ce18914a60180152092f30d0206e4",
+  "completedAt": "2026-09-29T18:34:40.796876Z",
+  "accountView": {
+    "taskId": "5665a02a-2300-4fab-866f-02a60ae57ead",
+    "attemptId": "fa891230-9df2-4494-b596-b6043e4327b4",
+    "state": "COMPLETED",
+    "ownerAddress": "0xab86ed8530d3e9d7fb1bae37f5d8ca3d433ba06f",
+    "accountAddress": "0x219e7bfb4c4788fa2b35638957b53a6900bf0655",
+    "deployTxHash": "0x9a5f4dc766206f0fbfc9c784d5130b1ae543697ea8b53d5b5ca8db57668d82be",
+    "chainTaskId": "0x955ebd34d21848bc686dd1b7904b4731fcf3204bd76df60968eb57277a4c7860",
+    "reviewSnapshotDigest": "0x09f764fb6907993a34ab0367f8932f49361be7d1601f8d3a83fbe3b5a326c2ce",
+    "amountBaseUnits": "23500000",
+    "tokenAddress": "0x1390c8745eb49069afd3b89393997e3fa14614f5",
+    "recipientAddress": "0x183f66622995afd7e16479e48a98b6241858e1ea",
+    "executorAddress": "0xe75b54381f7fea97783d9464c94153f89ad19d38",
+    "fulfillmentReporter": "0x294ccf70e247c689f1cba6a3e4685321780fc151",
+    "quoteExpiresAt": "2026-09-29T18:44:00Z",
+    "expiresAt": "2026-09-29T18:44:00Z",
+    "deploymentData": null,
+    "approvalDigest": "0x7deca9b80d388cdac884b30d7203f08ff54bb8d06dbcfd082ce637fce825eb03",
+    "approvalTxHash": "0x824f7509bc62cde0faf74a4cb015281efd32f116a8570c59eed1179119f100e2",
+    "approvalOperationState": "VERIFIED",
+    "paymentId": "0xfa648deab78b3fecda101e36f96dc9c54c1ce18914a60180152092f30d0206e4",
+    "paymentTxHash": "0x2e3110192ca84dbcafb5d6a0e925dd40cdd5fc5c700d161261afa10979281708",
+    "paymentOperationState": "VERIFIED",
+    "paymentVerifiedAt": "2026-09-29T18:34:06.356718Z",
+    "fulfillmentId": "ful_018b01626f647524",
+    "fulfillmentEvidenceMode": "local_pharmacy_simulator",
+    "fulfillmentEvidenceHash": "0xd8ff6f368240789b6c2b7d235be98c6e457ee12fd2583ff0e50a9d68c74ec457",
+    "fulfillmentTxHash": "0x8b6af8b662b87b86896e7179483da8fe94b11c60d6494fd20c6fc198f669ba60",
+    "fulfillmentOperationState": "VERIFIED",
+    "fulfillmentVerifiedAt": "2026-09-29T18:34:40.796876Z"
+  },
+  "events": [
+    {
+      "seq": 1,
+      "kind": "MANDATE_DRAFTED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 2,
+      "kind": "TASK_STATUS_CHANGED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 3,
+      "kind": "QUOTES_COLLECTED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 4,
+      "kind": "POLICY_DECIDED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 5,
+      "kind": "POLICY_DECIDED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 6,
+      "kind": "POLICY_DECIDED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 7,
+      "kind": "AI_PROPOSAL_RESULT",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 8,
+      "kind": "ACCOUNT_PREPARED",
+      "state": "AWAITING_APPROVAL"
+    },
+    {
+      "seq": 9,
+      "kind": "ACCOUNT_BOUND",
+      "state": null
+    },
+    {
+      "seq": 10,
+      "kind": "MANDATE_CONFIRMED",
+      "state": "ACTIVE"
+    },
+    {
+      "seq": 11,
+      "kind": "TASK_STATUS_CHANGED",
+      "state": "ACTIVE"
+    },
+    {
+      "seq": 12,
+      "kind": "APPROVAL_VERIFIED",
+      "state": "APPROVAL_UNKNOWN"
+    },
+    {
+      "seq": 13,
+      "kind": "ORDER_CREATED",
+      "state": "EXECUTING"
+    },
+    {
+      "seq": 14,
+      "kind": "TASK_STATUS_CHANGED",
+      "state": "EXECUTING"
+    },
+    {
+      "seq": 15,
+      "kind": "PAYMENT_VERIFIED",
+      "state": "PAYMENT_UNKNOWN"
+    },
+    {
+      "seq": 16,
+      "kind": "TASK_STATUS_CHANGED",
+      "state": "COMPLETED"
+    },
+    {
+      "seq": 17,
+      "kind": "FULFILLMENT_VERIFIED",
+      "state": "FULFILLMENT_UNKNOWN"
+    }
+  ],
+  "finishedAt": "2026-09-29T18:34:42.459Z"
+}
