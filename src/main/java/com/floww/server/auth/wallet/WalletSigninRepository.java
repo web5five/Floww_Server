@@ -1,9 +1,9 @@
 package com.floww.server.auth.wallet;
 
-import com.floww.server.auth.AuthProvider;
-import com.floww.server.auth.User;
-import com.floww.server.auth.UserRole;
-import com.floww.server.auth.UserStatus;
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
+import com.floww.server.auth.domain.UserStatus;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.sql.ResultSet;
