@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.floww.server.auth.JwtProvider;
-import com.floww.server.auth.TokenAudience;
+import com.floww.server.auth.infrastructure.JwtProvider;
+import com.floww.server.auth.config.TokenAudience;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.nio.charset.StandardCharsets;

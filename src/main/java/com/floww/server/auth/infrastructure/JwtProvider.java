@@ -1,5 +1,8 @@
-package com.floww.server.auth;
+package com.floww.server.auth.infrastructure;
 
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -51,7 +54,7 @@ public class JwtProvider {
         this(signingKey, Clock.systemUTC());
     }
 
-    JwtProvider(String signingKey, Clock clock) {
+    public JwtProvider(String signingKey, Clock clock) {
         this.clock = clock;
         if (signingKey == null || signingKey.isBlank()) {
             log.warn("JWT_SIGNING_KEY is not set; access token issue and verification are disabled");

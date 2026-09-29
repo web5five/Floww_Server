@@ -1,4 +1,8 @@
-package com.floww.server.auth;
+package com.floww.server.auth.presentation.dto.response;
+
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
 
 import java.time.Instant;
 import java.util.List;

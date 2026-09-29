@@ -1,11 +1,11 @@
 package com.floww.server.auth.wallet;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.floww.server.auth.JwtProvider;
-import com.floww.server.auth.SigninResponse;
-import com.floww.server.auth.TokenAudience;
-import com.floww.server.auth.User;
-import com.floww.server.auth.UserResponse;
+import com.floww.server.auth.infrastructure.JwtProvider;
+import com.floww.server.auth.presentation.dto.response.SigninResponse;
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.presentation.dto.response.UserResponse;
 import com.floww.server.common.error.ApiException;
 import com.floww.server.common.error.ErrorCode;
 import java.nio.charset.StandardCharsets;

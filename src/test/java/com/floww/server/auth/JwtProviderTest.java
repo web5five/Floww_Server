@@ -13,6 +13,13 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.UUID;
+
+import com.floww.server.auth.config.TokenAudience;
+import com.floww.server.auth.domain.AuthProvider;
+import com.floww.server.auth.domain.User;
+import com.floww.server.auth.domain.UserRole;
+import com.floww.server.auth.domain.UserStatus;
+import com.floww.server.auth.infrastructure.JwtProvider;
 import org.junit.jupiter.api.Test;
 
 /** Issue #22: AUTH-00 토큰 규칙 (sub·role·aud·iat·exp, 30분, aud=admin은 ADMIN만). */
