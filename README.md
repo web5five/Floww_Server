@@ -10,7 +10,9 @@ The current bearer-token identity is a local handoff mechanism. PR #19 replaced 
 
 For an isolated Docker/PostgreSQL runtime check, see the [F016 Korean/English container guide](docs/CONTAINER_RUNTIME_KO_EN.md).
 
-For the proposed Vercel container + Supabase PostgreSQL path (not yet deployed), see the [Korean/English deployment preparation and open gates](docs/VERCEL_SUPABASE_DEPLOY_KO_EN.md).
+For the proposed Vercel container + provisioned Supabase PostgreSQL path (Vercel not yet deployed), see the [Korean/English deployment preparation and open gates](docs/VERCEL_SUPABASE_DEPLOY_KO_EN.md).
+
+Issues #33–#35 (parent #32) add the JWT-only [`/api/v1/tasks` Task API](docs/TASK_API_KO_EN.md): versioned mandates with base-unit fUSDC amounts, a deterministic three-pharmacy simulator with a server merchant registry, deterministic ALLOW/DENY policy per attempt, EIP-712 purchase approval with single-use nonces, and idempotent merchant orders (Flyway `V4`). Orders do not pay; `paymentStatus` stays `NOT_ATTEMPTED`. Verification covers the local simulator and local test-wallet signatures only, not real Kiln, Sepolia payment or fulfillment.
 
 F018 adds opt-in [wallet sign-in API and browser integration guidance](docs/WALLET_SIGNIN_KO_EN.md). It verifies EOA SIWE signatures and issues the common client JWT; existing business routes still use the development bearer filter pending shared auth integration.
 
