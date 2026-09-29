@@ -126,6 +126,20 @@ class AiMerchantProposalTest {
         assertEquals("qb", result.proposedQuote().quoteId());
     }
 
+    @Test void uint256MaximumPassesThroughProposalWithoutPrecisionLoss() throws Exception {
+        String max = ExactBaseUnits.UINT256_MAX.toString();
+        Context base = context(false);
+        Context atMaximum = new Context(base.taskRef(), base.mandateRef(), base.mandateRevision(),
+                base.itemId(), max, base.asset(), base.deadline(), base.permittedPairs(),
+                base.requiredFulfillmentBy(), false, false, "ACTIVE");
+        choose("max-quote");
+        Result result = proposal.propose(atMaximum,
+                List.of(quote("max-quote", "A", "recipient-A", max, false)));
+        assertEquals(Status.PROPOSED, result.status());
+        assertEquals(max, result.proposedQuote().totalBaseUnits());
+        assertEquals(1, count());
+    }
+
     @Test void incompleteOrInactiveMandateMakesNoCall() {
         Context base = context(false);
         assertEquals(Status.CLARIFICATION_REQUIRED, proposal.propose(new Context(base.taskRef(), base.mandateRef(),
@@ -173,7 +187,7 @@ class AiMerchantProposalTest {
         assertEquals(Status.REJECTED, proposal.propose(context(false), List.of(q,
                 quote("other", "A", "different-recipient", "44000000", false))).status());
         Context base = context(false);
-        for (String invalid : List.of("-1", "0", "1.0", "9".repeat(39))) {
+        for (String invalid : List.of("-1", "0", "1.0", ExactBaseUnits.UINT256_MAX.add(java.math.BigInteger.ONE).toString())) {
             Context changed = new Context(base.taskRef(), base.mandateRef(), base.mandateRevision(), base.itemId(),
                     invalid, base.asset(), base.deadline(), base.permittedPairs(), base.requiredFulfillmentBy(),
                     false, false, "ACTIVE");

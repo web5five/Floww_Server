@@ -56,7 +56,7 @@ public final class AiMerchantProposal {
                 || context.mandateState() == null) {
             return result(Status.CLARIFICATION_REQUIRED, "BOUNDARY_MISSING", task, mandate, revision, List.of(), null);
         }
-        if (!asset(context.asset()) || amount(context.maximumTotalBaseUnits()) == null
+        if (!asset(context.asset()) || ExactBaseUnits.positive(context.maximumTotalBaseUnits()) == null
                 || context.permittedPairs().size() > MAX_QUOTES || !validPairs(context.permittedPairs())
                 || suppliedQuotes == null || suppliedQuotes.size() > MAX_QUOTES || !validQuoteMappings(suppliedQuotes)) {
             return result(Status.REJECTED, "INPUT_INVALID", task, mandate, revision, List.of(), null);
@@ -68,7 +68,7 @@ public final class AiMerchantProposal {
             return result(Status.REJECTED, "MANDATE_INACTIVE_OR_EXPIRED", task, mandate, revision, List.of(), null);
         }
         List<Quote> quotes = List.copyOf(suppliedQuotes);
-        BigInteger maximum = amount(context.maximumTotalBaseUnits());
+        BigInteger maximum = ExactBaseUnits.positive(context.maximumTotalBaseUnits());
         List<Finding> findings = new ArrayList<>();
         Map<String, Quote> eligible = new LinkedHashMap<>();
         for (Quote quote : quotes) {
@@ -176,7 +176,7 @@ public final class AiMerchantProposal {
     private static List<String> reasons(Context context, Quote quote, BigInteger maximum, Instant now) {
         List<String> reasons = new ArrayList<>();
         if (!text(quote.quoteId()) || !text(quote.merchantId()) || !text(quote.recipient())
-                || !text(quote.itemId()) || !asset(quote.asset()) || amount(quote.totalBaseUnits()) == null
+                || !text(quote.itemId()) || !asset(quote.asset()) || ExactBaseUnits.positive(quote.totalBaseUnits()) == null
                 || quote.expiresAt() == null || quote.promisedFulfillmentAt() == null) {
             reasons.add("QUOTE_MALFORMED");
             return reasons;
@@ -184,7 +184,7 @@ public final class AiMerchantProposal {
         if (!context.itemId().equals(quote.itemId())) reasons.add("ITEM_MISMATCH");
         if (!context.asset().equals(quote.asset())) reasons.add("ASSET_MISMATCH");
         if (!context.permittedPairs().contains(new Pair(quote.merchantId(), quote.recipient()))) reasons.add("RECIPIENT_NOT_PERMITTED");
-        if (amount(quote.totalBaseUnits()).compareTo(maximum) > 0) reasons.add("OVER_BUDGET");
+        if (ExactBaseUnits.positive(quote.totalBaseUnits()).compareTo(maximum) > 0) reasons.add("OVER_BUDGET");
         if (!quote.expiresAt().isAfter(now)) reasons.add("QUOTE_EXPIRED");
         if (!quote.inStock()) reasons.add("OUT_OF_STOCK");
         if (!quote.promisedFulfillmentAt().isAfter(now)
@@ -231,10 +231,6 @@ public final class AiMerchantProposal {
     private static boolean asset(Asset value) {
         return value != null && text(value.chainId()) && text(value.tokenAddress())
                 && value.decimals() >= 0 && value.decimals() <= 255;
-    }
-    private static BigInteger amount(String value) {
-        if (value == null || !value.matches("[1-9][0-9]{0,37}")) return null;
-        return new BigInteger(value);
     }
     private static JsonNode strictArgs(String raw) {
         if (raw == null || raw.length() > 2048) return null;
