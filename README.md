@@ -21,6 +21,10 @@
 
 ---
 
+The [`/api/v1/tasks` Task API](docs/TASK_API_KO_EN.md) persists versioned mandates and deterministic three-pharmacy simulator results in PostgreSQL (Flyway V4). It can create simulated merchant orders but makes no payment; `paymentStatus` remains `NOT_ATTEMPTED`. The [AI Task proposal endpoint](docs/AI_TASK_INTEGRATION_KO_EN.md) is request-driven and proposes through the existing policy boundary; it grants no spending authority.
+
+The `dev` profile uses local bearer tokens; default and `vercel` validate issued JWTs. [Wallet sign-in](docs/WALLET_SIGNIN_KO_EN.md) is opt-in. The [Vercel/Supabase deployment record](docs/VERCEL_SUPABASE_DEPLOY_KO_EN.md) distinguishes a protected Preview from a public demo or payment/fulfillment proof. Flyway V4 was applied additively to the dedicated Supabase demo database, not a populated production database. F002 prior work and AI coding assistance are disclosed in the demo guide; no PAIVERA implementation was copied.
+
 ## ✨ The Floww idea
 
 AI should be able to help with a task without receiving a blank check. Floww is built around a simple boundary:
@@ -129,7 +133,7 @@ See the [API handoff](docs/API_HANDOFF_KO_EN.md) and [OpenAPI 3.0.3 specificatio
 ```text
 src/main/java/com/floww/server/
 ├── aidraft/          # Stateless AI draft endpoint and review preflight
-├── aiproposal/       # Merchant proposal component (not HTTP-wired yet)
+├── aiproposal/       # Owner-JWT Task proposal endpoint and policy adapter
 ├── auth/             # Email auth, JWT, and optional wallet sign-in
 ├── execution/        # Legacy execution and local policy-precheck API
 ├── integration/      # Kiln and loopback merchant adapters
