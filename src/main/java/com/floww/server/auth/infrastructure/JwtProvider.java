@@ -54,7 +54,7 @@ public class JwtProvider {
         this(signingKey, Clock.systemUTC());
     }
 
-    JwtProvider(String signingKey, Clock clock) {
+    public JwtProvider(String signingKey, Clock clock) {
         this.clock = clock;
         if (signingKey == null || signingKey.isBlank()) {
             log.warn("JWT_SIGNING_KEY is not set; access token issue and verification are disabled");
