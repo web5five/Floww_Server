@@ -41,6 +41,15 @@ public final class AiProposalBoundary {
     }
 
     public Result propose(Snapshot initial, CurrentSnapshotReader reader) {
+        return proposeForState(initial, reader, false);
+    }
+
+    /** Fresh owner-scoped recommendation for an explicitly DRAFT mandate; no approval is created. */
+    public Result proposePreapproval(Snapshot initial, CurrentSnapshotReader reader) {
+        return proposeForState(initial, reader, true);
+    }
+
+    private Result proposeForState(Snapshot initial, CurrentSnapshotReader reader, boolean preapproval) {
         if (initial == null || initial.context() == null || initial.quotes() == null
                 || initial.quoteVersions() == null || reader == null
                 || !bounded(initial.ownerKey()) || !bounded(initial.taskVersion())
@@ -52,7 +61,8 @@ public final class AiProposalBoundary {
                     null, List.of(), null);
         }
 
-        Result candidate = proposal.propose(initial.context(), initial.quotes());
+        Result candidate = preapproval ? proposal.proposePreapproval(initial.context(), initial.quotes())
+                : proposal.propose(initial.context(), initial.quotes());
         if (candidate.status() != Status.PROPOSED) return candidate;
         Snapshot current;
         try {
@@ -64,7 +74,7 @@ public final class AiProposalBoundary {
         // Full equality also catches same-ID recipient/amount changes and removal of any quoted fact.
         if (!initial.equals(current) || !versionsMatch(current)) return reject(candidate, "SNAPSHOT_STALE");
         Instant now = clock.instant();
-        if (!"ACTIVE".equals(current.context().mandateState())
+        if (!(preapproval ? "DRAFT" : "ACTIVE").equals(current.context().mandateState())
                 || !current.context().deadline().isAfter(now)
                 || !current.context().requiredFulfillmentBy().isAfter(now)
                 || !candidate.proposedQuote().expiresAt().isAfter(now)

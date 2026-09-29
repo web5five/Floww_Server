@@ -47,6 +47,15 @@ public final class AiMerchantProposal {
     }
 
     public Result propose(Context context, List<Quote> suppliedQuotes) {
+        return proposeForState(context, suppliedQuotes, "ACTIVE");
+    }
+
+    /** Recommend against an explicitly unapproved DRAFT snapshot; this never grants approval. */
+    public Result proposePreapproval(Context context, List<Quote> suppliedQuotes) {
+        return proposeForState(context, suppliedQuotes, "DRAFT");
+    }
+
+    private Result proposeForState(Context context, List<Quote> suppliedQuotes, String requiredState) {
         if (context == null) return result(Status.CLARIFICATION_REQUIRED, "CONTEXT_MISSING", null, null, null, List.of(), null);
         String task = context.taskRef(), mandate = context.mandateRef(), revision = context.mandateRevision();
         if (!text(task) || !text(mandate) || !text(revision) || !text(context.itemId())
@@ -62,7 +71,7 @@ public final class AiMerchantProposal {
             return result(Status.REJECTED, "INPUT_INVALID", task, mandate, revision, List.of(), null);
         }
         Instant now = clock.instant();
-        if (!"ACTIVE".equals(context.mandateState()) || !context.deadline().isAfter(now)
+        if (!requiredState.equals(context.mandateState()) || !context.deadline().isAfter(now)
                 || !context.requiredFulfillmentBy().isAfter(now)
                 || context.requiredFulfillmentBy().isAfter(context.deadline())) {
             return result(Status.REJECTED, "MANDATE_INACTIVE_OR_EXPIRED", task, mandate, revision, List.of(), null);
@@ -135,7 +144,7 @@ public final class AiMerchantProposal {
         if (selected == null)
             return result(Status.REJECTED, "MODEL_QUOTE_NOT_ELIGIBLE", task, mandate, revision, findings, provenance);
         Instant after = clock.instant();
-        if (!"ACTIVE".equals(context.mandateState()) || !context.deadline().isAfter(after)
+        if (!requiredState.equals(context.mandateState()) || !context.deadline().isAfter(after)
                 || !selected.expiresAt().isAfter(after) || !context.requiredFulfillmentBy().isAfter(after)
                 || !selected.promisedFulfillmentAt().isAfter(after))
             return result(Status.REJECTED, "EXPIRED_DURING_PROPOSAL", task, mandate, revision, findings, provenance);
