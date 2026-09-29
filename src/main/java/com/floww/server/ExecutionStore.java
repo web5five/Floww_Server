@@ -1,5 +1,7 @@
 package com.floww.server;
 
+import com.floww.server.common.error.ApiException;
+import com.floww.server.common.error.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +16,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -65,7 +66,7 @@ public class ExecutionStore {
         String oldHash = db.queryForObject(
                 "SELECT request_hash FROM executions WHERE owner_id = ? AND idempotency_key = ?",
                 String.class, owner, key);
-        if (!hash.equals(oldHash)) throw new ApiException(HttpStatus.CONFLICT, "IDEMPOTENCY_CONFLICT");
+        if (!hash.equals(oldHash)) throw new ApiException(ErrorCode.IDEMPOTENCY_CONFLICT);
         return db.queryForObject("SELECT " + EXECUTION_COLUMNS
                         + " FROM executions WHERE owner_id = ? AND idempotency_key = ?",
                 executionMapper(), owner, key);
@@ -74,7 +75,7 @@ public class ExecutionStore {
     public Execution get(String owner, UUID id) {
         List<Execution> rows = db.query("SELECT " + EXECUTION_COLUMNS
                         + " FROM executions WHERE owner_id = ? AND id = ?", executionMapper(), owner, id);
-        if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "EXECUTION_NOT_FOUND");
+        if (rows.isEmpty()) throw new ApiException(ErrorCode.EXECUTION_NOT_FOUND, id);
         return rows.getFirst();
     }
 
@@ -105,7 +106,7 @@ public class ExecutionStore {
         get(owner, id);
         int changed = db.update("UPDATE executions SET status = 'RUNNING', updated_at = now() "
                 + "WHERE id = ? AND owner_id = ? AND status = 'CREATED'", id, owner);
-        if (changed != 1) throw new ApiException(HttpStatus.CONFLICT, "ALREADY_RUN");
+        if (changed != 1) throw new ApiException(ErrorCode.ALREADY_RUN, id);
         append(id, "RUN_STARTED", Map.of("mode", "quote_policy_precheck_only"),
                 "server", null, evidenceMode);
     }
@@ -138,7 +139,7 @@ public class ExecutionStore {
         append(id, kind, payload, "server", null, evidenceMode);
         int changed = db.update("UPDATE executions SET status = ?, updated_at = now() "
                 + "WHERE id = ? AND owner_id = ? AND status = 'RUNNING'", status, id, owner);
-        if (changed != 1) throw new ApiException(HttpStatus.CONFLICT, "NOT_RUNNING");
+        if (changed != 1) throw new ApiException(ErrorCode.NOT_RUNNING, id);
     }
 
     @Transactional

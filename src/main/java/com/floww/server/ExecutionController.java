@@ -1,12 +1,13 @@
 package com.floww.server;
 
+import com.floww.server.common.error.ApiException;
+import com.floww.server.common.error.ErrorCode;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -104,11 +105,11 @@ public class ExecutionController {
     }
 
     private static void page(long after, int limit) {
-        if (after < 0) throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CURSOR");
+        if (after < 0) throw new ApiException(ErrorCode.INVALID_CURSOR);
         pageLimit(limit);
     }
 
     private static void pageLimit(int limit) {
-        if (limit < 1 || limit > 100) throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_LIMIT");
+        if (limit < 1 || limit > 100) throw new ApiException(ErrorCode.INVALID_LIMIT);
     }
 }
