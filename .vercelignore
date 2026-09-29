@@ -1,14 +1,13 @@
-# Only the inputs needed by Dockerfile.vercel may leave this checkout on CLI deploy.
 /*
-!/.mvn/
-!/src/
-!/examples/
-!/scripts/
-!/mvnw
-!/pom.xml
-!/Dockerfile.vercel
-!/Dockerfile.vercel.dockerignore
-/examples/*
-!/examples/wallet-signin/
-/scripts/*
-!/scripts/vercel-entrypoint.sh
+!.mvn
+!src
+!examples
+!scripts
+!mvnw
+!pom.xml
+!Dockerfile.vercel
+!Dockerfile.vercel.dockerignore
+examples/*
+!examples/wallet-signin
+scripts/*
+!scripts/vercel-entrypoint.sh
