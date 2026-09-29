@@ -1,0 +1,43 @@
+{
+  "task": "F016",
+  "status": "PASS",
+  "sourceCommit": "e6eb3abb46852a2e3bbdc7723c266550fc4c0492",
+  "jarSha256": "54a7b786f329ee968548f8cf583309f1a7255d8a2256478a201e89140d40a9e8",
+  "mavenPackage": "PASS",
+  "dockerBuild": "PASS",
+  "cleanupNegativeTests": 4,
+  "resourceLimits": {
+    "dbMiB": 256,
+    "appMiB": 640,
+    "cpusEach": 1,
+    "dbTmpfsMiB": 128
+  },
+  "liveKiln": false,
+  "payment": false,
+  "verifiedAt": "2026-09-29T09:04:17.586064+00:00",
+  "harnessSha256": "31ffdd2184ae4f6c1d279136ca84a8c21da19cc797d0b094c989db8c1ad4ab23",
+  "runtimeExit": 0,
+  "executionId": "5be0a9b8-3334-429e-a84e-387d9424a4ca",
+  "runId": "2a03632793d1",
+  "checks": {
+    "freshFlywayV1": true,
+    "health": true,
+    "authenticatedCreateReadEvidence": true,
+    "crossOwner404": true,
+    "anonymous401": true,
+    "missingProviderFailed": true,
+    "appRestartPersistence": true,
+    "noRepeatedMigration": true,
+    "ownResourcesCleaned": true,
+    "existingVolumesPreserved": true
+  },
+  "environment": {
+    "architecture": "arm64",
+    "postgres": "16.4-alpine",
+    "java": "21",
+    "maven": "3.9.16",
+    "dockerEngine": "29.4.3"
+  },
+  "inputMode": "synthetic_local_development_tokens_and_mandate",
+  "existingDatabaseUpgradeTested": false
+}

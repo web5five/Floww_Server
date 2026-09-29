@@ -8,6 +8,10 @@ For frontend, core backend, and chain integration, start with the [Korean/Englis
 
 The current bearer-token identity is a local handoff mechanism. PR #19 replaced startup `schema.sql` with Flyway `db/migration/V1__initial_schema.sql` for database initialization; upgrading an existing populated database was not verified in this local integration. Core backend, merchant, wallet, frontend, and human domain owners must review their respective contracts before shared deployment. F002 prior work and AI coding assistance are disclosed in the demo guide; no PAIVERA implementation was copied.
 
+For an isolated Docker/PostgreSQL runtime check, see the [F016 Korean/English container guide](docs/CONTAINER_RUNTIME_KO_EN.md).
+
+F017 separately verified the packaged merchant-proposal component with one real event Kiln call using synthetic inputs: nine assertions passed and 705 tokens were reported. See [live evidence and its limits](docs/AI_MERCHANT_PROPOSAL_KO_EN.md). This is component evidence; the common task API and payment path are not exercised.
+
 F006 acceptance fixes recheck the stored quote and mandate after the final model call, require a terminal status for complete evidence, and expose `modelEvidenceMode` plus per-attempt usage completeness. Local fixture calls are `local_model_fixture`; only the exact official endpoint is classified `kiln`, and historical events without provenance remain unknown. The F004 live Kiln evidence predates these fixes.
 
 F008 adds a stateless, proposal-only AI draft preflight with [candidate contract and examples](docs/AI_DRAFT_CONTRACT.md). Its `READY_FOR_REVIEW` result means a structurally complete **model proposal**, not user approval, semantic verification, legal eligibility or executable authority. Human review and separate backend authorization remain required; the F010 development route does not mutate approved mandates or create execution authority. `scripts/evaluate_ai_draft.sh` runs only local model fixtures.
