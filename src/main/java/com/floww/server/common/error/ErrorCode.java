@@ -101,6 +101,33 @@ public enum ErrorCode {
             "이미 실행된 작업입니다", "Execution already started"),
     NOT_RUNNING(Category.HTTP, HttpStatus.CONFLICT, false,
             "실행 중인 상태가 아닙니다", "Execution is not running"),
+
+    // ─────────────── TASK (Issue #32, /api/v1/tasks) ───────────────
+    /** 타인 소유 Task도 404로 응답해 존재 여부를 드러내지 않는다 (개발 문서 · Task API). */
+    TASK_NOT_FOUND(Category.HTTP, HttpStatus.NOT_FOUND, false,
+            "작업을 찾을 수 없습니다", "Task not found"),
+    ATTEMPT_NOT_FOUND(Category.HTTP, HttpStatus.NOT_FOUND, false,
+            "구매 시도를 찾을 수 없습니다", "Attempt not found"),
+    INVALID_STATE_TRANSITION(Category.HTTP, HttpStatus.CONFLICT, false,
+            "현재 상태에서 할 수 없는 요청입니다", "Invalid state transition"),
+    /** 사용자가 확인한 mandate가 최신 버전이 아니다. 조건 변경 후 이전 서명은 재사용할 수 없다. */
+    MANDATE_VERSION_MISMATCH(Category.HTTP, HttpStatus.CONFLICT, false,
+            "확인한 위임이 최신 버전이 아닙니다", "Mandate version mismatch"),
+    /** Task당 구매 시도는 최대 5회 (정책과 결정 3장). */
+    ATTEMPT_LIMIT_REACHED(Category.HTTP, HttpStatus.CONFLICT, false,
+            "구매 시도 한도에 도달했습니다", "Attempt limit reached"),
+    /** EIP-712 승인 nonce가 없거나 이미 소비됨 (replay 거절). */
+    APPROVAL_NONCE_INVALID(Category.HTTP, HttpStatus.CONFLICT, false,
+            "승인 요청이 없거나 이미 사용되었습니다", "Approval request missing or already used"),
+    APPROVAL_EXPIRED(Category.HTTP, HttpStatus.CONFLICT, false,
+            "승인 요청이 만료되었습니다", "Approval request expired"),
+    /** 서명자가 Task 소유자에 연결된 지갑이 아니다. */
+    SIGNER_NOT_TASK_OWNER(Category.HTTP, HttpStatus.FORBIDDEN, false,
+            "작업 소유자의 지갑 서명이 아닙니다", "Signer is not a wallet of the task owner"),
+    /** 주문 직전 재검증 실패. 구체적 사유는 task 이벤트에 남는다. 새 제안·승인이 필요하다. */
+    APPROVAL_INVALIDATED(Category.HTTP, HttpStatus.CONFLICT, false,
+            "승인 조건이 더 이상 유효하지 않습니다", "Approval is no longer valid"),
+
     /** 현재 공통 경로에서는 발생하지 않는다. aidraft 경로와 이름을 맞추기 위해 둔다. */
     REQUEST_TOO_LARGE(Category.HTTP, HttpStatus.PAYLOAD_TOO_LARGE, false,
             "요청이 너무 큽니다", "Request too large"),
@@ -149,6 +176,15 @@ public enum ErrorCode {
      */
     TOOL_LOOP_LIMIT(Category.REJECTED, null, false,
             "도구 호출 횟수 한도를 넘었습니다", "Tool loop limit reached"),
+    // Issue #32: Task 정책 판정(attempt DENY)과 Task 종료 사유(statusReasonCode).
+    OUT_OF_STOCK(Category.REJECTED, null, false,
+            "재고가 없습니다", "Out of stock"),
+    NO_VALID_CANDIDATE(Category.REJECTED, null, false,
+            "위임 조건에 맞는 후보가 없습니다", "No valid candidate within the mandate"),
+    USER_REJECTED(Category.REJECTED, null, false,
+            "사용자가 위임을 거절했습니다", "Rejected by user"),
+    USER_CANCELLED(Category.REJECTED, null, false,
+            "사용자가 작업을 중지했습니다", "Cancelled by user"),
 
     // ─────────────── FAILED (ExecutionService.fail, 실행 실패) ───────────────
     KILN_NOT_CONFIGURED(Category.FAILED, null, false,
