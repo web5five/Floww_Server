@@ -7,6 +7,7 @@
 !pom.xml
 !Dockerfile.vercel
 !Dockerfile.vercel.dockerignore
+!vercel.json
 examples/*
 !examples/wallet-signin
 scripts/*

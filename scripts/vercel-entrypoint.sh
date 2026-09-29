@@ -9,4 +9,6 @@ if [ -n "${FLOWW_DB_CA_CERT_B64:-}" ]; then
     unset FLOWW_DB_CA_CERT_B64
 fi
 
-exec java -jar /app/server.jar
+# Favor cold-start time over peak JVM throughput for the request-driven demo.
+# Vercel must see the HTTP port before its container startup deadline.
+exec java -XX:TieredStopAtLevel=1 -jar /app/server.jar
