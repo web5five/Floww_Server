@@ -94,7 +94,7 @@ class TaskAccountHttpIntegrationTest {
         volatile String deployHash,deployData;
         final Map<String,Object> receipts=new ConcurrentHashMap<>();
         final AtomicInteger sends=new AtomicInteger();
-        final String mandateHash="0x"+"ab".repeat(32);
+        volatile String mandateHash;
         final String runtime;
         Fixture() {
             try {runtime="0x"+JSON.readTree(TaskAccountHttpIntegrationTest.class.getResourceAsStream(
@@ -195,7 +195,11 @@ class TaskAccountHttpIntegrationTest {
         FIXTURE.owner=owner.wallet().getAddress().toLowerCase();FIXTURE.taskId=prepared.path("chainTaskId").asText();
         FIXTURE.review=prepared.path("reviewSnapshotDigest").asText();FIXTURE.token=prepared.path("tokenAddress").asText();
         FIXTURE.recipient=prepared.path("recipientAddress").asText();
-        FIXTURE.expiry="0x"+word(prepared.path("expiresAt").isTextual()?Instant.parse(prepared.path("expiresAt").asText()).getEpochSecond():0);
+        long expiresAt=Instant.parse(prepared.path("expiresAt").asText()).getEpochSecond();
+        FIXTURE.expiry="0x"+word(expiresAt);
+        FIXTURE.mandateHash=TaskAccountCrypto.mandateHash(11155111,FIXTURE.owner,FIXTURE.taskId,FIXTURE.review,
+                FIXTURE.token,FIXTURE.recipient,EXEC.getAddress().toLowerCase(),REPORT.getAddress().toLowerCase(),
+                java.math.BigInteger.valueOf(23_500_000),expiresAt);
         FIXTURE.deployHash=topic(UUID.randomUUID().toString());FIXTURE.deployData=prepared.path("deploymentData").asText();
         FIXTURE.receipts.put(FIXTURE.deployHash,Map.of("status","0x1","contractAddress",ACCOUNT));
         JsonNode bound=ok(HttpMethod.POST,prefix+"/account/bind",owner,null,
@@ -241,6 +245,18 @@ class TaskAccountHttpIntegrationTest {
         assertEquals(0,db.queryForObject("SELECT count(*) FROM task_account_operations WHERE kind='PAYMENT' AND account_id=(SELECT id FROM task_accounts WHERE task_id=?::uuid)",Integer.class,id));
         db.update("UPDATE merchant_quotes SET registry_recipient_address=? WHERE task_id=?::uuid AND merchant_id='pharmacy-a'",
                 FIXTURE.recipient,id);
+        // Exact amount is a backend invariant: reject a one-unit-short order before reserve/sign/send.
+        db.update("UPDATE merchant_orders SET amount_base_units=?::numeric WHERE task_id=?::uuid",
+                java.math.BigInteger.valueOf(23_499_999),id);
+        var wrongAmount=call(HttpMethod.POST,prefix+"/account/payment",owner,null,Map.of());
+        assertEquals(409,wrongAmount.getStatusCode().value());
+        assertEquals(1,FIXTURE.sends.get());
+        assertEquals(0,db.queryForObject("SELECT count(*) FROM task_account_operations WHERE kind='PAYMENT' AND account_id=(SELECT id FROM task_accounts WHERE task_id=?::uuid)",Integer.class,id));
+        assertEquals("NOT_ATTEMPTED",db.queryForObject("SELECT payment_status FROM merchant_orders WHERE task_id=?::uuid",String.class,id));
+        JsonNode noPaymentHash=ok(HttpMethod.GET,prefix+"/account",owner,null,null,200);
+        assertTrue(noPaymentHash.path("paymentTxHash").isMissingNode() || noPaymentHash.path("paymentTxHash").isNull());
+        db.update("UPDATE merchant_orders SET amount_base_units=?::numeric WHERE task_id=?::uuid",
+                java.math.BigInteger.valueOf(23_500_000),id);
         var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
         JsonNode unknown;
         try {

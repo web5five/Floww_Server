@@ -60,6 +60,23 @@ public final class TaskAccountCrypto {
                 Long.toString(r.quoteExpiry().getEpochSecond())));
         return m;
     }
+    /** Independently recompute FlowwTaskAccount.hashMandate from the pinned Solidity type and static ABI fields. */
+    public static String mandateHash(long chainId, String owner, String taskId, String reviewDigest,
+                                     String token, String recipient, String executor, String reporter,
+                                     BigInteger maxSpend, long expiresAt) {
+        String type = "FlowwTaskMandateV1(uint256 chainId,bytes32 taskId,bytes32 reviewSnapshotDigest,"
+                + "address owner,address token,address recipient,address executor,address fulfillmentReporter,"
+                + "uint256 maxSpend,uint64 expiresAt)";
+        String typeHash = Numeric.toHexString(Hash.sha3(type.getBytes(StandardCharsets.UTF_8)));
+        String encoded = TaskAccountArtifact.word(typeHash) + TaskAccountArtifact.word(BigInteger.valueOf(chainId))
+                + TaskAccountArtifact.word(taskId) + TaskAccountArtifact.word(reviewDigest)
+                + TaskAccountArtifact.word(owner) + TaskAccountArtifact.word(token)
+                + TaskAccountArtifact.word(recipient) + TaskAccountArtifact.word(executor)
+                + TaskAccountArtifact.word(reporter) + TaskAccountArtifact.word(maxSpend)
+                + TaskAccountArtifact.word(BigInteger.valueOf(expiresAt));
+        return Numeric.toHexString(Hash.sha3(Numeric.hexStringToByteArray("0x" + encoded)));
+    }
+
     public static Map<String, Object> approvalTypedData(Approval a) {
         return typed("FlowwTaskAccount", a.chainId(), a.account(), "MandateApproval", List.of(
                 field("owner", "address"), field("taskId", "bytes32"), field("reviewSnapshotDigest", "bytes32"),
