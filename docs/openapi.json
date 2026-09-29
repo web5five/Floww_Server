@@ -208,6 +208,58 @@
                       },
                       "error": null
                     }
+                  },
+                  "clarificationBlankCost": {
+                    "summary": "Unresolved blank cost fields are clarification, not approval",
+                    "value": {
+                      "httpContractVersion": "ai-draft-http.v1",
+                      "status": "NEEDS_CLARIFICATION",
+                      "draft": {
+                        "schemaVersion": "ai-draft.v1",
+                        "objective": "Get one paperback delivered",
+                        "itemScope": "One specified paperback",
+                        "providerCriteria": "Authorized bookstore",
+                        "maximumTotalCost": {
+                          "amount": "",
+                          "asset": "",
+                          "includesAllUserPaidFees": null
+                        },
+                        "deadline": "2099-01-01T00:00:00Z",
+                        "fulfillmentCriterion": "Delivery recorded at the specified address"
+                      },
+                      "issues": [
+                        {
+                          "code": "COST_AMOUNT_MISSING",
+                          "field": "maximumTotalCost.amount",
+                          "question": "What is the exact maximum total amount?"
+                        },
+                        {
+                          "code": "COST_ASSET_MISSING",
+                          "field": "maximumTotalCost.asset",
+                          "question": "Which asset or currency is this amount in?"
+                        },
+                        {
+                          "code": "COST_FEES_UNRESOLVED",
+                          "field": "maximumTotalCost.includesAllUserPaidFees",
+                          "question": "Does this maximum include every charge and fee you pay?"
+                        }
+                      ],
+                      "evidence": {
+                        "modelId": "qwen3-32b",
+                        "modelEvidenceMode": "local_model_fixture",
+                        "toolCallId": "fixture-call",
+                        "generationId": "fixture-generation",
+                        "usageStatus": "reported",
+                        "usage": {
+                          "prompt_tokens": 8,
+                          "completion_tokens": 6,
+                          "total_tokens": 14
+                        },
+                        "cost": null,
+                        "attempts": 1
+                      },
+                      "error": null
+                    }
                   }
                 }
               }
@@ -868,14 +920,23 @@
             }
           },
           "409": {
-            "description": "ALREADY_RUN",
+            "description": "ALREADY_RUN when claim cannot start; NOT_RUNNING if final status transition loses its RUNNING state",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LegacyError"
                 },
-                "example": {
-                  "code": "ALREADY_RUN"
+                "examples": {
+                  "alreadyRun": {
+                    "value": {
+                      "code": "ALREADY_RUN"
+                    }
+                  },
+                  "notRunning": {
+                    "value": {
+                      "code": "NOT_RUNNING"
+                    }
+                  }
                 }
               }
             }
@@ -1615,13 +1676,13 @@
             "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
             "nullable": true,
             "maxLength": 40,
-            "description": "Null or blank means unresolved; nonblank must be positive exact decimal text."
+            "description": "Null or blank means unresolved; nonblank must be an exact positive decimal string. READY_FOR_REVIEW requires a present positive amount."
           },
           "asset": {
             "type": "string",
             "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
             "nullable": true,
-            "description": "Null or blank means unresolved."
+            "description": "Null or blank means unresolved; READY_FOR_REVIEW requires a present asset."
           },
           "includesAllUserPaidFees": {
             "type": "boolean",
@@ -1655,11 +1716,27 @@
             "nullable": true
           },
           "maximumTotalCost": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DraftCost"
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
+                "nullable": true,
+                "maxLength": 40,
+                "description": "Null or blank means unresolved; nonblank must be positive exact decimal text."
+              },
+              "asset": {
+                "type": "string",
+                "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
+                "nullable": true,
+                "description": "Null or blank means unresolved."
+              },
+              "includesAllUserPaidFees": {
+                "type": "boolean",
+                "nullable": true
               }
-            ],
+            },
+            "additionalProperties": false,
             "nullable": true
           },
           "deadline": {
@@ -1675,7 +1752,8 @@
         "required": [
           "schemaVersion"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Partial model proposal; missing, null or blank fields may remain unresolved in NEEDS_CLARIFICATION. READY_FOR_REVIEW requires deterministic preflight."
       },
       "Issue": {
         "type": "object",
@@ -1780,11 +1858,67 @@
             ]
           },
           "draft": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Draft"
+            "type": "object",
+            "properties": {
+              "schemaVersion": {
+                "type": "string",
+                "enum": [
+                  "ai-draft.v1"
+                ]
+              },
+              "objective": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "itemScope": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "providerCriteria": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
+              },
+              "maximumTotalCost": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^(?:$|(?!0(?:\\.0{1,18})?$)(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,18})?)$",
+                    "nullable": true,
+                    "maxLength": 40,
+                    "description": "Null or blank means unresolved; nonblank must be positive exact decimal text."
+                  },
+                  "asset": {
+                    "type": "string",
+                    "pattern": "^(?:$|[A-Za-z][A-Za-z0-9_]{1,31})$",
+                    "nullable": true,
+                    "description": "Null or blank means unresolved."
+                  },
+                  "includesAllUserPaidFees": {
+                    "type": "boolean",
+                    "nullable": true
+                  }
+                },
+                "additionalProperties": false,
+                "nullable": true
+              },
+              "deadline": {
+                "type": "string",
+                "nullable": true
+              },
+              "fulfillmentCriterion": {
+                "type": "string",
+                "maxLength": 500,
+                "nullable": true
               }
+            },
+            "required": [
+              "schemaVersion"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "issues": {
@@ -1794,18 +1928,63 @@
             }
           },
           "evidence": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AiEvidence"
+            "type": "object",
+            "properties": {
+              "modelId": {
+                "type": "string",
+                "nullable": true
+              },
+              "modelEvidenceMode": {
+                "type": "string",
+                "enum": [
+                  "kiln",
+                  "local_model_fixture",
+                  "unknown_model_provider"
+                ]
+              },
+              "toolCallId": {
+                "type": "string",
+                "nullable": true
+              },
+              "generationId": {
+                "type": "string",
+                "nullable": true
+              },
+              "usageStatus": {
+                "type": "string"
+              },
+              "usage": {
+                "$ref": "#/components/schemas/Usage"
+              },
+              "cost": {
+                "type": "string",
+                "nullable": true
+              },
+              "attempts": {
+                "type": "integer"
               }
+            },
+            "required": [
+              "modelId",
+              "modelEvidenceMode",
+              "toolCallId",
+              "generationId",
+              "usageStatus",
+              "usage",
+              "cost",
+              "attempts"
             ],
             "nullable": true
           },
           "error": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AiError"
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
               }
+            },
+            "required": [
+              "code"
             ],
             "nullable": true
           }

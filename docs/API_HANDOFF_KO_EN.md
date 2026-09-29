@@ -32,7 +32,7 @@ App-thrown legacy `ApiException` responses are `{"code":"..."}`. AI draft mapped
 | `GET /api/integrations/readiness` | Configuration flags / 설정 여부 | Local operational | 200 readiness object below | 401 `UNAUTHORIZED` |
 | `POST /api/ai/drafts` | Model clarification or proposal / 질문·제안 | Frontend candidate, development only | 200 AI envelope below | 400, 401, 413, 415, 502, 503, 504 codes below |
 | `POST /api/executions` | Record local confirmed mandate / 로컬 확정 범위 기록 | Legacy fixture | 200 execution object; replay also 200 | 400 `INVALID_INPUT`, 409 `IDEMPOTENCY_CONFLICT`, 401 |
-| `POST /api/executions/{id}/run` | One local merchant/Kiln precheck / 로컬 사전 검사 | Legacy fixture | 200 execution object, including `REJECTED` or `FAILED` terminal state | 404 `EXECUTION_NOT_FOUND`, 409 `ALREADY_RUN`, 401 |
+| `POST /api/executions/{id}/run` | One local merchant/Kiln precheck / 로컬 사전 검사 | Legacy fixture | 200 execution object, including `REJECTED` or `FAILED` terminal state | 404 `EXECUTION_NOT_FOUND`, 409 `ALREADY_RUN` or `NOT_RUNNING`, 401 |
 | `GET /api/executions` | Newest owner executions / 최신 목록 | Legacy fixture | 200 **array** of execution objects | 400 `INVALID_LIMIT`, 401 |
 | `GET /api/executions/history` | Cursor-paged owner history / 커서 페이지 | Legacy fixture | 200 `HistoryPage` object | 400 `INVALID_LIMIT`, 404 `EXECUTION_NOT_FOUND` for inaccessible `before`, 401 |
 | `GET /api/executions/{id}` | Owner detail / 상세 | Legacy fixture | 200 execution object | 404 `EXECUTION_NOT_FOUND`, 401 |
@@ -50,24 +50,122 @@ POST /api/ai/drafts
 Authorization: Bearer <SERVER_SIDE_DEV_TOKEN>
 Content-Type: application/json
 
-{"conversation":[{"role":"user","content":"Please draft a scope for one specified paperback. My all-fee maximum is 60 USD; use an authorized bookstore and finish by 2099-01-01T00:00:00Z."}]}
+{
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Please draft a scope for one specified paperback. My all-fee maximum is 60 USD; use an authorized bookstore and finish by 2099-01-01T00:00:00Z."
+    }
+  ]
+}
 ```
 
 Illustrative 200 reviewable response / 검토 가능 응답 예시:
 
 ```json
-{"httpContractVersion":"ai-draft-http.v1","status":"READY_FOR_REVIEW","draft":{"schemaVersion":"ai-draft.v1","objective":"Get one paperback delivered","itemScope":"One specified paperback","providerCriteria":"Authorized bookstore","maximumTotalCost":{"amount":"60","asset":"USD","includesAllUserPaidFees":true},"deadline":"2099-01-01T00:00:00Z","fulfillmentCriterion":"Delivery recorded at the specified address"},"issues":[],"evidence":{"modelId":"qwen3-32b","modelEvidenceMode":"local_model_fixture","toolCallId":"fixture-call","generationId":"fixture-generation","usageStatus":"reported","usage":{"prompt_tokens":8,"completion_tokens":6,"total_tokens":14},"cost":null,"attempts":1},"error":null}
+{
+  "httpContractVersion": "ai-draft-http.v1",
+  "status": "READY_FOR_REVIEW",
+  "draft": {
+    "schemaVersion": "ai-draft.v1",
+    "objective": "Get one paperback delivered",
+    "itemScope": "One specified paperback",
+    "providerCriteria": "Authorized bookstore",
+    "maximumTotalCost": {
+      "amount": "60",
+      "asset": "USD",
+      "includesAllUserPaidFees": true
+    },
+    "deadline": "2099-01-01T00:00:00Z",
+    "fulfillmentCriterion": "Delivery recorded at the specified address"
+  },
+  "issues": [],
+  "evidence": {
+    "modelId": "qwen3-32b",
+    "modelEvidenceMode": "local_model_fixture",
+    "toolCallId": "fixture-call",
+    "generationId": "fixture-generation",
+    "usageStatus": "reported",
+    "usage": {
+      "prompt_tokens": 8,
+      "completion_tokens": 6,
+      "total_tokens": 14
+    },
+    "cost": null,
+    "attempts": 1
+  },
+  "error": null
+}
 ```
 
 Illustrative 200 clarification response / 추가 질문 응답 예시:
 
 ```json
-{"httpContractVersion":"ai-draft-http.v1","status":"NEEDS_CLARIFICATION","draft":{"schemaVersion":"ai-draft.v1","objective":"Get one paperback delivered","itemScope":"One specified paperback","providerCriteria":"Authorized bookstore","maximumTotalCost":null,"deadline":"2099-01-01T00:00:00Z","fulfillmentCriterion":"Delivery recorded at the specified address"},"issues":[{"code":"COST_MISSING","field":"maximumTotalCost","question":"What is the maximum total you will pay, in which asset, including every fee charged to you?"}],"evidence":{"modelId":"qwen3-32b","modelEvidenceMode":"local_model_fixture","toolCallId":"fixture-call","generationId":"fixture-generation","usageStatus":"reported","usage":{"prompt_tokens":8,"completion_tokens":6,"total_tokens":14},"cost":null,"attempts":1},"error":null}
+{
+  "httpContractVersion": "ai-draft-http.v1",
+  "status": "NEEDS_CLARIFICATION",
+  "draft": {
+    "schemaVersion": "ai-draft.v1",
+    "objective": "Get one paperback delivered",
+    "itemScope": "One specified paperback",
+    "providerCriteria": "Authorized bookstore",
+    "maximumTotalCost": null,
+    "deadline": "2099-01-01T00:00:00Z",
+    "fulfillmentCriterion": "Delivery recorded at the specified address"
+  },
+  "issues": [
+    {
+      "code": "COST_MISSING",
+      "field": "maximumTotalCost",
+      "question": "What is the maximum total you will pay, in which asset, including every fee charged to you?"
+    }
+  ],
+  "evidence": {
+    "modelId": "qwen3-32b",
+    "modelEvidenceMode": "local_model_fixture",
+    "toolCallId": "fixture-call",
+    "generationId": "fixture-generation",
+    "usageStatus": "reported",
+    "usage": {
+      "prompt_tokens": 8,
+      "completion_tokens": 6,
+      "total_tokens": 14
+    },
+    "cost": null,
+    "attempts": 1
+  },
+  "error": null
+}
 ```
 
-The model can omit unresolved draft fields; `null` means unresolved, never inferred approval. `maximumTotalCost.amount` is an exact positive decimal **string**, up to 18 fractional digits when present; its `asset` is a model-proposed label, not the legacy `TEST_USDC` restriction. Deadline must be an absolute future offset date-time for structural readiness; relative dates need trusted context. `issues[].question` can be null for structural errors, but model-invalid proposals return 502 instead of draft issues. Provenance fields can be null; `cost` is only provider-reported, never estimated. `modelEvidenceMode` is `kiln` only for exact configured official endpoint, `local_model_fixture` for loopback, otherwise `unknown_model_provider`. / 미확정 값은 null로 유지합니다. 금액·마감·증거를 추정하지 않습니다.
+The model can omit unresolved draft fields; missing, `null`, or blank amount/asset values can remain unresolved in `NEEDS_CLARIFICATION`, never inferred as approval. `READY_FOR_REVIEW` requires a present, exact positive decimal `maximumTotalCost.amount` **string** (up to 18 fractional digits), a present asset, all user-paid fees included, and the other structurally complete fields. The `asset` is a model-proposed label, not the legacy `TEST_USDC` restriction. Deadline must be an absolute future offset date-time for structural readiness; relative dates need trusted context. `issues[].question` can be null for structural errors, but model-invalid proposals return 502 instead of draft issues. Provenance fields can be null; `cost` is only provider-reported, never estimated. `modelEvidenceMode` is `kiln` only for exact configured official endpoint, `local_model_fixture` for loopback, otherwise `unknown_model_provider`. / 미확정 금액·자산은 누락·null·빈 문자열일 수 있습니다. `READY_FOR_REVIEW`에는 양수 금액과 자산, 사용자 부담 비용 포함 여부 등 완전한 조건이 필요합니다. 금액·마감·증거를 추정하지 않습니다.
 
-Mapped AI errors all use `{"httpContractVersion":"ai-draft-http.v1","status":"ERROR","draft":null,"issues":[],"evidence":null,"error":{"code":"INVALID_REQUEST"}}` with the relevant code and optional provenance. Codes: 400 `INVALID_REQUEST` (JSON/shape) or `INVALID_CONVERSATION` (turn rules); 401 `UNAUTHORIZED`; 413 `REQUEST_TOO_LARGE`; 415 `UNSUPPORTED_MEDIA_TYPE`; 502 `MODEL_PROPOSAL_FAILED` or `MODEL_PROPOSAL_INVALID`; 503 `PROVIDER_NOT_CONFIGURED`; 504 `PROVIDER_TIMEOUT`. The no-store header applies to mapped responses. / 매핑된 오류는 같은 초안 봉투를 쓰며 상황에 따라 증거가 포함됩니다.
+Mapped AI errors use this shape with the relevant code and optional provenance. / 매핑된 오류는 같은 초안 봉투를 쓰며 상황에 따라 증거가 포함됩니다.
+
+```json
+{
+  "httpContractVersion": "ai-draft-http.v1",
+  "status": "ERROR",
+  "draft": null,
+  "issues": [],
+  "evidence": null,
+  "error": {
+    "code": "INVALID_REQUEST"
+  }
+}
+```
+
+| HTTP | Code / 코드 | Cause / 원인 |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST`, `INVALID_CONVERSATION` | JSON/shape error or turn/count/content rule / JSON 형식 또는 대화 제한 |
+| 401 | `UNAUTHORIZED` | Development bearer invalid / 개발용 인증 실패 |
+| 413 | `REQUEST_TOO_LARGE` | Body over 128 KiB / 본문 초과 |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Media type or charset rejected / 미지원 형식 |
+| 502 | `MODEL_PROPOSAL_FAILED`, `MODEL_PROPOSAL_INVALID` | Provider/model/tool failure or structural proposal rejection / 제공자·모델·초안 구조 오류 |
+| 503 | `PROVIDER_NOT_CONFIGURED` | No server-side provider key / 제공자 설정 없음 |
+| 504 | `PROVIDER_TIMEOUT` | Provider deadline / 제공자 시간 제한 |
+
+The no-store header applies to mapped responses. / 매핑된 응답은 저장하지 않도록 헤더를 설정합니다.
 
 ## Legacy execution request and response / 기존 실행 경로
 
@@ -79,46 +177,199 @@ Authorization: Bearer <SERVER_SIDE_DEV_TOKEN>
 Idempotency-Key: local-demo-001
 Content-Type: application/json
 
-{"confirmed":true,"mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"}}
+{
+  "confirmed": true,
+  "mandate": {
+    "goal": "Get one sample item",
+    "itemId": "item-1",
+    "maxTotal": "10.00",
+    "currency": "TEST_USDC",
+    "recipient": "merchant_good",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  }
+}
 ```
 
 Illustrative 200 create/detail execution response / 생성·상세 실행 객체 예시:
 
 ```json
-{"id":"11111111-1111-4111-8111-111111111111","ownerId":"alice","status":"CREATED","mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z","updatedAt":"2026-09-29T00:00:00Z"}
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "ownerId": "alice",
+  "status": "CREATED",
+  "mandate": {
+    "goal": "Get one sample item",
+    "itemId": "item-1",
+    "maxTotal": "10.00",
+    "currency": "TEST_USDC",
+    "recipient": "merchant_good",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  },
+  "createdAt": "2026-09-29T00:00:00Z",
+  "updatedAt": "2026-09-29T00:00:00Z"
+}
 ```
 
 
 Illustrative 200 `POST /api/executions/{id}/run` with no configured test merchant / 테스트 판매자 미설정 시 실행 응답 예시:
 
 ```json
-{"id":"11111111-1111-4111-8111-111111111111","ownerId":"alice","status":"FAILED","mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z","updatedAt":"2026-09-29T00:00:01Z"}
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "ownerId": "alice",
+  "status": "FAILED",
+  "mandate": {
+    "goal": "Get one sample item",
+    "itemId": "item-1",
+    "maxTotal": "10.00",
+    "currency": "TEST_USDC",
+    "recipient": "merchant_good",
+    "expiresAt": "2099-01-01T00:00:00Z"
+  },
+  "createdAt": "2026-09-29T00:00:00Z",
+  "updatedAt": "2026-09-29T00:00:01Z"
+}
 ```
 
-The same owner/key/canonical mandate replays one ID with HTTP 200; a changed mandate under the key returns 409. `run` claims once; business failures are usually persisted terminal `REJECTED`/`FAILED` objects with HTTP 200, with reason in events. This path has no purchase, signing, or fulfillment effect. / 동일 키의 같은 범위는 같은 ID를 반환하며 변경되면 409입니다. 검사 실패도 기록된 종결 상태 객체로 반환될 수 있습니다.
+The same owner/key/canonical mandate replays one ID with HTTP 200; a changed mandate under the key returns 409 `IDEMPOTENCY_CONFLICT`. `run` claims once; a second claim returns 409 `ALREADY_RUN`, while a lost `RUNNING` state during a terminal transition can return 409 `NOT_RUNNING`. Business failures are usually persisted terminal `REJECTED`/`FAILED` objects with HTTP 200, with reason in events. This path has no purchase, signing, or fulfillment effect. / 같은 키에 변경된 범위를 쓰면 409이며 재실행 시 `ALREADY_RUN`, 실행 중 종결 상태 전환이 무효화되면 `NOT_RUNNING`입니다. 검사 실패도 기록된 종결 상태 객체로 반환될 수 있습니다.
 
 Illustrative 200 `GET /api/executions?limit=50` / 배열 예시:
 
 ```json
-[{"id":"11111111-1111-4111-8111-111111111111","ownerId":"alice","status":"CREATED","mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z","updatedAt":"2026-09-29T00:00:00Z"}]
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "ownerId": "alice",
+    "status": "CREATED",
+    "mandate": {
+      "goal": "Get one sample item",
+      "itemId": "item-1",
+      "maxTotal": "10.00",
+      "currency": "TEST_USDC",
+      "recipient": "merchant_good",
+      "expiresAt": "2099-01-01T00:00:00Z"
+    },
+    "createdAt": "2026-09-29T00:00:00Z",
+    "updatedAt": "2026-09-29T00:00:00Z"
+  }
+]
 ```
 
 Illustrative 200 `GET /api/executions/history?limit=50` / 페이지 예시:
 
 ```json
-{"executions":[{"id":"11111111-1111-4111-8111-111111111111","ownerId":"alice","status":"CREATED","mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z","updatedAt":"2026-09-29T00:00:00Z"}],"nextCursor":"11111111-1111-4111-8111-111111111111","hasMore":false}
+{
+  "executions": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "ownerId": "alice",
+      "status": "CREATED",
+      "mandate": {
+        "goal": "Get one sample item",
+        "itemId": "item-1",
+        "maxTotal": "10.00",
+        "currency": "TEST_USDC",
+        "recipient": "merchant_good",
+        "expiresAt": "2099-01-01T00:00:00Z"
+      },
+      "createdAt": "2026-09-29T00:00:00Z",
+      "updatedAt": "2026-09-29T00:00:00Z"
+    }
+  ],
+  "nextCursor": "11111111-1111-4111-8111-111111111111",
+  "hasMore": false
+}
 ```
 
 Illustrative 200 `GET /api/executions/{id}/events?after=0&limit=50` / 이벤트 예시:
 
 ```json
-{"events":[{"seq":1,"schemaVersion":2,"kind":"MANDATE_CONFIRMED","actor":"user","source":"floww_server","correlationId":"11111111-1111-4111-8111-111111111111","toolCallId":null,"evidenceMode":"mandate","modelEvidenceMode":null,"payload":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z"}],"nextCursor":1,"hasMore":false}
+{
+  "events": [
+    {
+      "seq": 1,
+      "schemaVersion": 2,
+      "kind": "MANDATE_CONFIRMED",
+      "actor": "user",
+      "source": "floww_server",
+      "correlationId": "11111111-1111-4111-8111-111111111111",
+      "toolCallId": null,
+      "evidenceMode": "mandate",
+      "modelEvidenceMode": null,
+      "payload": {
+        "goal": "Get one sample item",
+        "itemId": "item-1",
+        "maxTotal": "10.00",
+        "currency": "TEST_USDC",
+        "recipient": "merchant_good",
+        "expiresAt": "2099-01-01T00:00:00Z"
+      },
+      "createdAt": "2026-09-29T00:00:00Z"
+    }
+  ],
+  "nextCursor": 1,
+  "hasMore": false
+}
 ```
 
 Illustrative 200 `GET /api/executions/{id}/evidence.json?after=0&limit=100` for a **CREATED** execution / 미완료 내보내기 예시:
 
 ```json
-{"format":"floww-evidence-2","execution":{"id":"11111111-1111-4111-8111-111111111111","ownerId":"alice","status":"CREATED","mandate":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z","updatedAt":"2026-09-29T00:00:00Z"},"events":{"events":[{"seq":1,"schemaVersion":2,"kind":"MANDATE_CONFIRMED","actor":"user","source":"floww_server","correlationId":"11111111-1111-4111-8111-111111111111","toolCallId":null,"evidenceMode":"mandate","modelEvidenceMode":null,"payload":{"goal":"Get one sample item","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"2099-01-01T00:00:00Z"},"createdAt":"2026-09-29T00:00:00Z"}],"nextCursor":1,"hasMore":false},"complete":false,"pageComplete":true,"nextCursor":1,"evidenceMode":"no_merchant_quote","modelEvidenceMode":"none","modelUsage":{"status":"none","attempts":0},"progressLabel":"Mandate recorded","paymentStatus":"NOT_AVAILABLE"}
+{
+  "format": "floww-evidence-2",
+  "execution": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "ownerId": "alice",
+    "status": "CREATED",
+    "mandate": {
+      "goal": "Get one sample item",
+      "itemId": "item-1",
+      "maxTotal": "10.00",
+      "currency": "TEST_USDC",
+      "recipient": "merchant_good",
+      "expiresAt": "2099-01-01T00:00:00Z"
+    },
+    "createdAt": "2026-09-29T00:00:00Z",
+    "updatedAt": "2026-09-29T00:00:00Z"
+  },
+  "events": {
+    "events": [
+      {
+        "seq": 1,
+        "schemaVersion": 2,
+        "kind": "MANDATE_CONFIRMED",
+        "actor": "user",
+        "source": "floww_server",
+        "correlationId": "11111111-1111-4111-8111-111111111111",
+        "toolCallId": null,
+        "evidenceMode": "mandate",
+        "modelEvidenceMode": null,
+        "payload": {
+          "goal": "Get one sample item",
+          "itemId": "item-1",
+          "maxTotal": "10.00",
+          "currency": "TEST_USDC",
+          "recipient": "merchant_good",
+          "expiresAt": "2099-01-01T00:00:00Z"
+        },
+        "createdAt": "2026-09-29T00:00:00Z"
+      }
+    ],
+    "nextCursor": 1,
+    "hasMore": false
+  },
+  "complete": false,
+  "pageComplete": true,
+  "nextCursor": 1,
+  "evidenceMode": "no_merchant_quote",
+  "modelEvidenceMode": "none",
+  "modelUsage": {
+    "status": "none",
+    "attempts": 0
+  },
+  "progressLabel": "Mandate recorded",
+  "paymentStatus": "NOT_AVAILABLE"
+}
 ```
 
 The response has `Content-Disposition: attachment; filename=floww-evidence-{id}.json`. `complete=true` requires `after=0`, no further events and terminal `REVIEWED`, `REJECTED`, or `FAILED`. `pageComplete` describes only the current page. `modelUsage.status=complete` requires valid reported usage for every provider attempt and then includes `totals`; `incomplete` omits totals. Historical evidence may have schema version 1 or unknown model provenance. Neither `complete` nor `REVIEWED` means payment or fulfillment. / `complete`는 증거 범위의 완전성 표시일 뿐 결제 완료가 아닙니다.
@@ -126,7 +377,13 @@ The response has `Content-Disposition: attachment; filename=floww-evidence-{id}.
 Illustrative 200 readiness / 설정 상태 예시:
 
 ```json
-{"kilnConfigured":false,"merchantConfigured":false,"merchantMode":"unavailable","paymentConfigured":false,"processHealthIsIntegrationProof":false}
+{
+  "kilnConfigured": false,
+  "merchantConfigured": false,
+  "merchantMode": "unavailable",
+  "paymentConfigured": false,
+  "processHealthIsIntegrationProof": false
+}
 ```
 
 ## Setup, checks, and owner handoff / 실행·검증·담당
@@ -140,6 +397,8 @@ Follow [local setup](API_CONTRACT.md#local-run-from-a-clean-checkout) for Postgr
 | Same recorded JAR, one live Kiln HTTP request | HTTP 200 `READY_FOR_REVIEW`, `qwen3-32b`, 1,170 reported tokens. Synthetic request; cost absent/unknown. Not user approval or broad model accuracy. |
 
 The controller record path is outside this repository, so a public reader should use the sanitized [F010 evidence](evidence/f010/README.md) and [verification JSON](evidence/f010/verification.json). F011 adds docs only; no fresh runtime or paid call is claimed. / F011은 문서 작업이며 위 검증을 새로 실행했다고 주장하지 않습니다.
+
+**Reuse limit / 재사용 한계:** Adapting these HTTP shapes alone may be insufficient. Product identity, owner-bound task state, the exact draft revision shown to a user, and trusted confirmation may require internal application, persistence, and enforcement-boundary changes before integration. / 현재 HTTP 형식만 연결해서는 부족할 수 있습니다. 제품 사용자 식별, 소유자별 작업 상태, 사용자가 본 정확한 초안 버전, 신뢰 가능한 확인 기록은 애플리케이션 내부·저장소·권한 검사 경계의 변경이 필요할 수 있습니다.
 
 | Owner / 담당 | Next contract / 다음 계약 |
 | --- | --- |
