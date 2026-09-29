@@ -1,6 +1,6 @@
 # F028 AI Task integration / AI Task 연동
 
-Status: local candidate for issue #18. The controller owns integration review, publication, and live Kiln evidence.
+Status: integrated candidate for issue #18. Controller verification passed on source `9ca8e85`: 184 local PostgreSQL tests and a real Kiln-backed HTTP flow. See [independent verification](../reports/F028_INDEPENDENT_VERIFICATION.md). Publication/CI status belongs to the linked PR.
 
 ## Route / 경로
 
@@ -34,6 +34,28 @@ An `AI_PROPOSAL_RESULT` Task event records bounded status, reason, original Task
 
 ## Verification boundary / 검증 경계
 
-The local HTTP test uses a real USER JWT, PostgreSQL V4 Task APIs and a loopback Kiln response fixture. It covers A selection and policy ALLOW, B/C findings, wrong owner, missing auth, body rejection, malformed/provider/ineligible output, no candidate, repeat, revision during inference, and quote/mandate expiry during inference. It does not verify event Kiln reachability, testnet payment, merchant fulfillment, user acceptance, or the controller's frozen head verification.
+The local HTTP test uses a real USER JWT, PostgreSQL V4 Task APIs and a loopback Kiln response fixture. It covers A selection and policy ALLOW, B/C findings, wrong owner, missing auth, body rejection, malformed/provider/ineligible output, no candidate, repeat, revision during inference, and quote/mandate expiry during inference. This automated fixture suite does not itself prove a live provider call, payment, fulfillment or user acceptance. The controller separately verified real Kiln reachability and the frozen source, as recorded below.
 
-로컬 HTTP 테스트는 실제 USER JWT, PostgreSQL V4 Task API, 루프백 Kiln 응답 fixture를 사용합니다. A 선택과 정책 ALLOW, B/C 제외 사유, 타인 접근·미인증·본문 거절, 모델 형식·제공자·부적격 응답, 후보 없음, 반복, 추론 중 위임 수정 및 견적·위임 만료를 확인합니다. 행사 Kiln 연결, 테스트넷 지급, 판매자 이행, 사용자 수용, 컨트롤러의 고정 SHA 검증은 아직 확인하지 않았습니다.
+로컬 HTTP 테스트는 실제 USER JWT, PostgreSQL V4 Task API, 루프백 Kiln 응답 fixture를 사용합니다. A 선택과 정책 ALLOW, B/C 제외 사유, 타인 접근·미인증·본문 거절, 모델 형식·제공자·부적격 응답, 후보 없음, 반복, 추론 중 위임 수정 및 견적·위임 만료를 확인합니다. 이 fixture 테스트 자체는 실제 모델 호출·지급·이행·사용자 수용을 입증하지 않습니다. 컨트롤러는 별도로 행사 Kiln 연결과 고정 SHA 검증을 완료했으며, 테스트넷 지급·이행·실제 사용자 승인은 이 변경의 검증 범위에 포함되지 않습니다.
+
+
+## Client connection example / 프론트 연결 예시
+
+```javascript
+const response = await fetch(`${apiBase}/api/v1/tasks/${taskId}/ai-proposal`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${accessToken}` },
+}); // No body; Task and quotes must come from the server.
+const result = await response.json();
+if (!response.ok) throw result;
+if (result.proposal.status === 'PROPOSED' && result.attempt?.policy?.decision === 'ALLOW') {
+  // Display the selected quote and offer the separate purchase-approval step.
+  // 선택 견적을 보여주고 별도 구매 승인으로 연결합니다.
+}
+// Otherwise show the returned proposal status/reason; do not treat HTTP 200 as approval.
+// 그 외에는 제안 상태·사유를 표시합니다. HTTP 200은 구매 승인이 아닙니다.
+```
+
+The route does not collect missing fields interactively: use the existing draft/clarification flow before persisting a complete Task. Cross-origin browser access needs the deployment's exact-origin CORS configuration. A second click may incur another model call; disable the button while awaiting a result.
+
+이 경로에서 누락 필드를 대화로 수집하지 않습니다. 완성된 Task를 만들기 전에 기존 draft/clarification 흐름을 사용합니다. 다른 출처의 브라우저 연결에는 배포의 정확한 CORS 설정이 필요합니다. 재요청은 모델을 다시 호출할 수 있으므로 응답을 기다리는 동안 버튼을 비활성화합니다.
