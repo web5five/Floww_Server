@@ -168,3 +168,7 @@ scripts/                           # Smoke and fixture evaluation helpers
 **Less autopilot. More intention. Let good decisions flow.** 💙💛
 
 </div>
+
+## Selected-purchase TaskAccount integration
+
+The optional Sepolia TaskAccount path connects a persisted Task and selected quote to owner approval, exact payment and verified simulated fulfillment. See the [API and configuration guide](docs/TASKACCOUNT_E2E_KO_EN.md) and [independent public-Sepolia evidence](docs/F031_INDEPENDENT_SEPOLIA.md). Enable it explicitly with `FLOWW_TASKACCOUNT_ENABLED=true`; the frontend must use the account approval sequence in that mode.

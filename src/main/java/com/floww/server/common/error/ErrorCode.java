@@ -127,6 +127,12 @@ public enum ErrorCode {
     /** 주문 직전 재검증 실패. 구체적 사유는 task 이벤트에 남는다. 새 제안·승인이 필요하다. */
     APPROVAL_INVALIDATED(Category.HTTP, HttpStatus.CONFLICT, false,
             "승인 조건이 더 이상 유효하지 않습니다", "Approval is no longer valid"),
+    CHAIN_MODE_REQUIRED(Category.HTTP, HttpStatus.CONFLICT, false,
+            "계약 승인 경로를 사용해야 합니다", "Contract approval path required"),
+    CHAIN_NOT_READY(Category.HTTP, HttpStatus.CONFLICT, false,
+            "계약 또는 체인 상태를 확인할 수 없습니다", "Contract or chain state is not ready"),
+    PAYMENT_UNKNOWN(Category.HTTP, HttpStatus.CONFLICT, false,
+            "결제 결과를 조회해야 합니다", "Payment outcome must be reconciled"),
 
     /** 현재 공통 경로에서는 발생하지 않는다. aidraft 경로와 이름을 맞추기 위해 둔다. */
     REQUEST_TOO_LARGE(Category.HTTP, HttpStatus.PAYLOAD_TOO_LARGE, false,
