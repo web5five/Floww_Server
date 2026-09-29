@@ -19,7 +19,8 @@ path = Path('.env')
 text = path.read_text()
 for placeholder in ('replace-with-a-local-only-password',
                     'replace-with-a-long-local-only-token',
-                    'replace-with-another-long-local-only-token'):
+                    'replace-with-another-long-local-only-token',
+                    'replace-with-a-long-local-jwt-signing-key'):
     text = text.replace(placeholder, secrets.token_urlsafe(32))
 path.write_text(text)
 path.chmod(0o600)
