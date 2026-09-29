@@ -2,7 +2,7 @@
 
 **Scope / 범위:** This specifies the existing AI integration/preliminary verification code and its neighboring implemented routes. It is not a final product API design for the whole service. / 이 문서는 이미 구현된 AI 연동·사전 검증 코드와 인접 경로의 명세입니다. 서비스 전체의 최종 제품 API 설계안이 아닙니다.
 
-**Source / 기준:** `Floww_Server` `13210e8acd27c0d909a110ec1f3f4371002a3db5` (2026-09-29), issue #11. [Importable OpenAPI 3.0.3](openapi.json) describes the same implemented routes. Every JSON example below is illustrative test data, not a captured production response. Architecture page 11927569 v11 and vision page 12746767 v2 were retrieved by the controller as proposal context; they are not team API acceptance. / 아래 JSON은 모두 설명용 테스트 데이터입니다. 컨트롤러가 확인한 아키텍처 문서 11927569 v11 및 비전 12746767 v2는 제안 맥락이며 팀 승인 API는 아닙니다.
+**Source / 기준:** `Floww_Server` upstream main `2de6e4191798cca6a10609b557be09a1fcf614a6` (2026-09-29; PR #14 common errors, PR #15 Java packages), integrated locally for F015. [Importable OpenAPI 3.0.3](openapi.json) describes the implemented routes. Every JSON example below is illustrative test data, not a captured production response. Architecture page 11927569 v11 and vision page 12746767 v6 are proposal context, not team API acceptance. / 아래 JSON은 설명용 테스트 데이터이며 아키텍처·비전 문서는 제안 맥락일 뿐 팀 승인 API가 아닙니다.
 
 ## What runs / 실제 구성
 
@@ -18,11 +18,28 @@ flowchart LR
 
 The frontend candidate is `POST /api/ai/drafts`: it returns clarification questions or a descriptive proposal. `READY_FOR_REVIEW` is structural readiness of model text, not approval or verified eligibility. Do not connect it directly to `POST /api/executions` with `confirmed:true`. The legacy execution API records a local confirmed-mandate fixture and quote-policy evidence; `REVIEWED` is a local precheck, not a completed purchase. F009 review binding is a pure Java helper with no HTTP route. `PaymentGateway` and `AuthoritativeFactPort` have no HTTP callbacks or implementations. / 프런트엔드 후보는 초안 API입니다. 초안의 `READY_FOR_REVIEW`를 기존 `confirmed:true` 실행 API에 바로 연결하면 안 됩니다. F009는 HTTP 경로가 없고 결제·권위 있는 결과 포트도 구현되지 않았습니다.
 
+Source pointers after PR #15 / PR #15 이후 코드 위치: `aidraft/AiDraftHttpController.java` owns F010; `execution/ExecutionController.java` owns `/api/executions`; `integration/kiln/KilnClient.java` and `integration/merchant/MerchantGateway.java` are provider adapters; `common/auth/DevAuthFilter.java` and `common/error/GlobalExceptionHandler.java` own the development auth and common errors; `payment/PaymentGateway.java` and `payment/AuthoritativeFactPort.java` remain unimplemented ports. These paths are beneath `src/main/java/com/floww/server/`. F012–F014 `aiproposal/AiMerchantProposal.java` is a separate Java caller component with no controller wiring. / 초안·실행·연동·공통 오류의 실제 패키지 경계를 반영하며 F012–F014는 연결되지 않은 Java 컴포넌트입니다.
+
 ## Authentication and common rules / 인증 및 공통 규칙
 
-`/actuator/health` alone bypasses `DevAuthFilter`; every other application route needs `Authorization: Bearer <SERVER_SIDE_DEV_TOKEN>`. Configured distinct tokens of at least 16 characters map to server-side `alice` or `bob`; cross-owner execution IDs return 404. The token is not a browser credential: keep it and `KILN_API_KEY` in a trusted local shell or server-side development proxy, never in `NEXT_PUBLIC_` variables. There is no implemented CORS contract. `/api/ai/drafts` unauthorized responses use its envelope; other route authorization failures return `{"code":"UNAUTHORIZED"}`. / 헬스를 제외한 경로는 개발용 Bearer 인증이 필요하며 소유자는 서버가 결정합니다. 브라우저 공개 변수에 토큰을 넣지 마세요. CORS 지원을 약속하지 않습니다.
+`/actuator/health` alone bypasses `common.auth.DevAuthFilter`; every other application route needs `Authorization: Bearer <SERVER_SIDE_DEV_TOKEN>`. Configured distinct tokens of at least 16 characters map to server-side `alice` or `bob`; cross-owner execution IDs return 404. The token is not a browser credential: keep it and `KILN_API_KEY` in a trusted local shell or server-side development proxy, never in `NEXT_PUBLIC_` variables. There is no implemented CORS contract. `/api/ai/drafts` unauthorized responses use its envelope; other route authorization failures use the common error object below. / 헬스를 제외한 경로는 개발용 Bearer 인증이 필요하며 소유자는 서버가 결정합니다. 초안 경로의 인증 오류만 전용 봉투를 유지합니다.
 
-App-thrown legacy `ApiException` responses are `{"code":"..."}`. AI draft mapped responses have the separate `ai-draft-http.v1` envelope and `Cache-Control: no-store`. Framework-level malformed UUID, parameter conversion, unsupported method, missing body, and unexpected server errors are not guaranteed to use either format. Only the AI draft route enforces strict UTF-8, duplicate/trailing JSON rejection, and a 128 KiB body limit at its own controller boundary; do not apply those guarantees globally. / 프레임워크 오류나 예기치 않은 서버 오류는 앱 전용 오류 형식을 보장하지 않습니다. 엄격한 UTF-8·중복 키·본문 크기 제한은 초안 경로에만 적용됩니다.
+PR #14 maps application and recognized Spring MVC errors outside the F010 draft controller to `common.error.ErrorResponse`: `reasonCode`, backwards-compatible `code`, bilingual `message`, nullable `taskId` and `attemptId`, and `retryable`. `taskId` is the existing execution UUID when the store throws with one; it is null for pre-creation and other errors. `attemptId` is currently null. A bad UUID or nonnumeric parameter is 400 `INVALID_INPUT`; unreadable JSON or a missing request body is 400 `MALFORMED_JSON`; an unknown route is 404 `ROUTE_NOT_FOUND`; an unsupported method is 405 `METHOD_NOT_ALLOWED` with `Allow`; unsupported media type is 415 `UNSUPPORTED_MEDIA_TYPE`; unexpected exceptions are 500 `INTERNAL_ERROR` without internal details. Only the AI draft route enforces strict UTF-8, duplicate/trailing JSON rejection, and a 128 KiB body limit at its own controller boundary. / 초안 외 경로는 공통 오류 객체를 쓰며 알려진 프레임워크 오류도 매핑합니다. 엄격한 본문 제한은 초안 경로 전용입니다.
+
+Illustrative common 404 for an execution ID / 실행 ID 오류 예시:
+
+```json
+{
+  "reasonCode": "EXECUTION_NOT_FOUND",
+  "code": "EXECUTION_NOT_FOUND",
+  "message": {"ko": "실행을 찾을 수 없습니다", "en": "Execution not found"},
+  "taskId": "11111111-1111-4111-8111-111111111111",
+  "attemptId": null,
+  "retryable": false
+}
+```
+
+`POST /api/ai/drafts` keeps its own `ai-draft-http.v1` envelope for mapped responses and authentication, with `Cache-Control: no-store`. An exception escaping that controller can reach common advice; do not assume the draft envelope for an unhandled server failure. / 초안 경로의 명시적 매핑·인증은 전용 봉투이고 처리되지 않은 예외는 공통 핸들러로 갈 수 있습니다.
 
 ## Route inventory / 경로 목록
 
@@ -31,7 +48,7 @@ App-thrown legacy `ApiException` responses are `{"code":"..."}`. AI draft mapped
 | `GET /actuator/health` | Process and DB health / 프로세스·DB 상태 | Local operational | 200 `{"status":"UP"}` when healthy | Actuator health may return 503; not integration proof |
 | `GET /api/integrations/readiness` | Configuration flags / 설정 여부 | Local operational | 200 readiness object below | 401 `UNAUTHORIZED` |
 | `POST /api/ai/drafts` | Model clarification or proposal / 질문·제안 | Frontend candidate, development only | 200 AI envelope below | 400, 401, 413, 415, 502, 503, 504 codes below |
-| `POST /api/executions` | Record local confirmed mandate / 로컬 확정 범위 기록 | Legacy fixture | 200 execution object; replay also 200 | 400 `INVALID_INPUT`, 409 `IDEMPOTENCY_CONFLICT`, 401 |
+| `POST /api/executions` | Record local confirmed mandate / 로컬 확정 범위 기록 | Legacy fixture | 200 execution object; replay also 200 | 400 `INVALID_INPUT` or `MALFORMED_JSON`, 409 `IDEMPOTENCY_CONFLICT`, 401 |
 | `POST /api/executions/{id}/run` | One local merchant/Kiln precheck / 로컬 사전 검사 | Legacy fixture | 200 execution object, including `REJECTED` or `FAILED` terminal state | 404 `EXECUTION_NOT_FOUND`, 409 `ALREADY_RUN` or `NOT_RUNNING`, 401 |
 | `GET /api/executions` | Newest owner executions / 최신 목록 | Legacy fixture | 200 **array** of execution objects | 400 `INVALID_LIMIT`, 401 |
 | `GET /api/executions/history` | Cursor-paged owner history / 커서 페이지 | Legacy fixture | 200 `HistoryPage` object | 400 `INVALID_LIMIT`, 404 `EXECUTION_NOT_FOUND` for inaccessible `before`, 401 |
@@ -39,7 +56,7 @@ App-thrown legacy `ApiException` responses are `{"code":"..."}`. AI draft mapped
 | `GET /api/executions/{id}/events` | Sequence-paged evidence events / 이벤트 | Legacy fixture | 200 `EventPage` object | 400 `INVALID_CURSOR` or `INVALID_LIMIT`, 404, 401 |
 | `GET /api/executions/{id}/evidence.json` | Download evidence export / 증거 내보내기 | Legacy fixture | 200 `floww-evidence-2` object and attachment header | 400 `INVALID_CURSOR` or `INVALID_LIMIT`, 404, 401 |
 
-Paths with `{id}` require an execution UUID. Bad UUID or nonnumeric query text is handled by Spring before app validation, so its response body can differ. Query defaults: list/history `limit=50`; history optional `before` UUID; events `after=0`, `limit=50`; export `after=0`, `limit=100`. All limits are 1–100. `after` must be nonnegative. `GET /api/executions` is a bounded array with no cursor. `GET /api/executions/history` sorts by `(created_at,id)` descending; `nextCursor` is the last ID or the incoming `before` on an empty page, and `hasMore` indicates another page. Its `before` must belong to the same owner. Event `nextCursor` is the last sequence or incoming `after` on an empty page. / 목록은 배열이고 히스토리는 별도 페이지 객체입니다. 실행 ID 및 커서는 소유자 범위에서 조회합니다.
+Paths with `{id}` require an execution UUID. Bad UUID or nonnumeric query text is handled by Spring and mapped to the common 400 `INVALID_INPUT`. Query defaults: list/history `limit=50`; history optional `before` UUID; events `after=0`, `limit=50`; export `after=0`, `limit=100`. All limits are 1–100. `after` must be nonnegative. `GET /api/executions` is a bounded array with no cursor. `GET /api/executions/history` sorts by `(created_at,id)` descending; `nextCursor` is the last ID or the incoming `before` on an empty page, and `hasMore` indicates another page. Its `before` must belong to the same owner. Event `nextCursor` is the last sequence or incoming `after` on an empty page. / 목록은 배열이고 히스토리는 별도 페이지 객체입니다. 잘못된 UUID는 공통 400 오류로 응답합니다.
 
 ## AI draft request and responses / 초안 요청·응답
 
@@ -169,7 +186,7 @@ The no-store header applies to mapped responses. / 매핑된 응답은 저장하
 
 ## Legacy execution request and response / 기존 실행 경로
 
-`POST /api/executions` requires `Idempotency-Key` matching `[A-Za-z0-9._:-]{8,128}` and an object with exactly `confirmed:true` plus `mandate`. The mandate has exactly `goal` (nonblank after trim, ≤500, no ISO control characters), `itemId` (`[A-Za-z0-9._:-]{1,128}`), `maxTotal` (positive decimal **JSON string**, at most 12 integer and 8 fractional digits), `currency` exactly `TEST_USDC`, `recipient` (`[A-Za-z0-9._:-]{3,128}`), and future `expiresAt` parsed by Java `Instant.parse`. Unknown fields and wrong types get 400 `INVALID_INPUT`. It is a local fixture path; its `confirmed:true` body flag is not trusted user confirmation for the AI draft. / JSON 숫자 대신 문자열 금액을 사용하며 정확한 필드만 허용합니다. 본문 플래그는 초안에 대한 신뢰 가능한 사용자 확인이 아닙니다.
+`POST /api/executions` requires `Idempotency-Key` matching `[A-Za-z0-9._:-]{8,128}` and an object with exactly `confirmed:true` plus `mandate`. The mandate has exactly `goal` (nonblank after trim, ≤500, no ISO control characters), `itemId` (`[A-Za-z0-9._:-]{1,128}`), `maxTotal` (positive decimal **JSON string**, at most 12 integer and 8 fractional digits), `currency` exactly `TEST_USDC`, `recipient` (`[A-Za-z0-9._:-]{3,128}`), and future `expiresAt` parsed by Java `Instant.parse`. Parsed but invalid fields get 400 `INVALID_INPUT`; unreadable or missing JSON gets 400 `MALFORMED_JSON`. It is a local fixture path; its `confirmed:true` body flag is not trusted user confirmation for the AI draft. / JSON 숫자 대신 문자열 금액을 사용하며 정확한 필드만 허용합니다. 해석 가능한 잘못된 필드는 `INVALID_INPUT`, 해석 불가·누락 본문은 `MALFORMED_JSON`입니다. 본문 플래그는 초안에 대한 신뢰 가능한 사용자 확인이 아닙니다.
 
 ```http
 POST /api/executions

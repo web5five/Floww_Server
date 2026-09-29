@@ -4,6 +4,8 @@
 
 The actual entrypoint is `new AiMerchantProposal(kilnClient, clock).propose(context, quotes)` in `src/main/java/com/floww/server/aiproposal/AiMerchantProposal.java`. The types are the `MerchantProposal.Context`, `Quote`, `Result`, `Finding`, `Asset`, `Pair`, and `Provenance` records. There is no F012 controller or Spring registration. / 실제 호출은 위 Java 메서드이며 F012에는 컨트롤러나 Spring 등록이 없습니다.
 
+`kilnClient` is the existing `com.floww.server.integration.kiln.KilnClient` from PR #15. The implemented F010 `POST /api/ai/drafts` is a separate HTTP draft envelope; neither that controller nor the legacy execution controller invokes `AiMerchantProposal`. These JSON fixtures describe Java records only. / PR #15의 KilnClient 패키지를 사용합니다. F010 초안 HTTP 경로와 기존 실행 컨트롤러는 이 제안 컴포넌트를 호출하지 않으며 아래 JSON은 Java 레코드 예시입니다.
+
 ## Complete representative input / 대표 입력 전체
 
 This is the `input` object in [`merchant-proposal-examples.json`](../src/test/resources/aiproposal/merchant-proposal-examples.json), at fixed test clock `2040-01-01T00:00:00Z`. The three quotes include total prices of 43, 47, and 63 synthetic MockUSDC. Decimal precision 6 is a fixture choice only. `maximumTotalBaseUnits: "60000000"` means 60 fixture tokens; no real chain, token address, recipient, prescription, merchant or legal status is represented. / 시계·체인·토큰·수취인·처방 적격성은 전부 합성 데이터입니다.

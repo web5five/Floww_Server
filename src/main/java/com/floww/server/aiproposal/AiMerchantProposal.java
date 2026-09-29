@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.floww.server.KilnClient;
+import com.floww.server.integration.kiln.KilnClient;
 import com.floww.server.aiproposal.MerchantProposal.Asset;
 import com.floww.server.aiproposal.MerchantProposal.Context;
 import com.floww.server.aiproposal.MerchantProposal.Finding;
