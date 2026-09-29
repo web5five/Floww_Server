@@ -1,4 +1,4 @@
-package com.floww.server;
+package com.floww.server.integration.kiln;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
