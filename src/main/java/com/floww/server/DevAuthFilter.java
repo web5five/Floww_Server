@@ -1,5 +1,6 @@
 package com.floww.server;
 
+import com.floww.server.aidraft.AiDraftHttpController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -41,13 +42,15 @@ public class DevAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
+        if (request.getRequestURI().equals("/api/ai/drafts")) response.setHeader("Cache-Control", "no-store");
         String header = request.getHeader("Authorization");
         String supplied = header != null && header.startsWith("Bearer ") ? header.substring(7) : "";
         String owner = equal(supplied, aliceToken) ? "alice" : equal(supplied, bobToken) ? "bob" : null;
         if (owner == null) {
             response.setStatus(401);
             response.setContentType("application/json");
-            mapper.writeValue(response.getOutputStream(), Map.of("code", "UNAUTHORIZED"));
+            mapper.writeValue(response.getOutputStream(), request.getRequestURI().equals("/api/ai/drafts")
+                    ? AiDraftHttpController.unauthorizedBody() : Map.of("code", "UNAUTHORIZED"));
             return;
         }
         request.setAttribute("owner", owner);
