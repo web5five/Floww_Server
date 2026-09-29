@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 const root = new URL('./', import.meta.url);
 const host = '127.0.0.1';
@@ -13,15 +14,16 @@ const assets = new Map([
   ['/dist/magic-connector.js', ['dist/magic-connector.js', 'text/javascript; charset=utf-8']]
 ]);
 const authPaths = new Set(['/api/v1/auth/wallet/nonce', '/api/v1/auth/wallet/verify']);
+const publishable = value => typeof value === 'string' && /^pk_[A-Za-z0-9_-]{8,}$/.test(value) ? value : '';
 
-createServer(async (req, res) => {
+export function createPreviewServer({ key = process.env.FLOWW_MAGIC_PUBLISHABLE_KEY ?? '' } = {}) {
+  return createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   const path = req.url?.split('?')[0];
   if (req.method === 'GET' && path === '/magic-config.mjs') {
-    const key = process.env.FLOWW_MAGIC_PUBLISHABLE_KEY ?? '';
     res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
-    res.end(`export const publishableKey = ${JSON.stringify(key)};\n`);
+    res.end(`export const publishableKey = ${JSON.stringify(publishable(key))};\n`);
     return;
   }
   if (req.method === 'GET' && assets.has(path)) {
@@ -61,6 +63,11 @@ createServer(async (req, res) => {
     return;
   }
   res.writeHead(404); res.end();
-}).listen(port, host, () => {
-  process.stdout.write(`Magic preview: http://${host}:${port}/\n`);
-});
+  });
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  createPreviewServer().listen(port, host, () => {
+    process.stdout.write(`Magic preview: http://${host}:${port}/\n`);
+  });
+}

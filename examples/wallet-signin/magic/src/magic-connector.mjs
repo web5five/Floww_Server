@@ -40,17 +40,21 @@ function safeError(error, otpComplete) {
 /** Optional client connector. No SDK import, OTP, or API call without a publishable key. */
 export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_ID, network = 'sepolia',
   origin = globalThis.location?.origin, fetchFn = globalThis.fetch,
-  loadMagic = () => import('magic-sdk'), onState = () => {} } = {}) {
+  loadMagic = () => import('magic-sdk'), onState = () => {},
+  now = () => globalThis.performance.now() } = {}) {
   const checked = checkedNetwork(network, chainId);
   let generation = 0;
   let token = null;
   let result = null;
+  let sessionExpiresAt = null;
   let activeMagic = null;
   let authenticated = false;
   let activeProvider = null;
   let listeners = null;
   let pending = null;
-  const loggedOut = new WeakSet();
+  const logoutPromises = new WeakMap();
+  let logoutBarrier = Promise.resolve();
+  let logoutFailed = false;
 
   const detach = () => {
     if (activeProvider && listeners) {
@@ -60,18 +64,39 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
     listeners = null;
   };
   const logoutOnce = async instance => {
-    if (!instance || loggedOut.has(instance)) return;
-    loggedOut.add(instance);
-    await instance.user.logout();
+    if (!instance) return;
+    let work = logoutPromises.get(instance);
+    if (!work) {
+      work = Promise.resolve().then(() => instance.user.logout());
+      logoutPromises.set(instance, work);
+    }
+    return work;
   };
-  const clear = () => { token = null; result = null; detach(); activeMagic = null; authenticated = false; };
+  const queueLogout = instance => {
+    const work = logoutOnce(instance);
+    logoutBarrier = Promise.allSettled([logoutBarrier, work]).then(outcomes => {
+      if (outcomes.some(outcome => outcome.status === 'rejected')) logoutFailed = true;
+    });
+    return work;
+  };
+  const clear = () => { token = null; result = null; sessionExpiresAt = null;
+    detach(); activeMagic = null; authenticated = false; };
   const invalidate = reason => {
     generation++;
     const instance = activeMagic;
     const shouldLogout = authenticated;
     clear();
     onState({ status: 'disconnected', message: reason });
-    if (shouldLogout) void logoutOnce(instance).catch(() => {});
+    if (shouldLogout) void queueLogout(instance).catch(() => {});
+  };
+  const getAccessToken = () => {
+    if (!token) return null;
+    const currentTime = now();
+    if (!Number.isFinite(sessionExpiresAt) || !Number.isFinite(currentTime) || currentTime >= sessionExpiresAt) {
+      invalidate('로그인 시간이 만료되었습니다. 다시 로그인해 주세요.');
+      return null;
+    }
+    return token;
   };
   const attach = provider => {
     activeProvider = provider;
@@ -91,7 +116,7 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
     }
     if (!validEmail(email)) return Promise.reject(new MagicConnectorError('INVALID_EMAIL', '올바른 이메일을 입력해 주세요.'));
     if (pending) return pending;
-    if (result && token) return Promise.resolve(result);
+    if (result && getAccessToken()) return Promise.resolve(result);
 
     const run = ++generation;
     clear();
@@ -101,7 +126,12 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
     const work = async () => {
       let instance;
       let otpComplete = false;
+      let verifyStartedAt = null;
       try {
+        await logoutBarrier;
+        current();
+        if (logoutFailed) throw new MagicConnectorError('LOGOUT_FAILED',
+          'Magic 로그아웃을 완료하지 못했습니다. 새로고침 후 다시 시도해 주세요.');
         onState({ status: 'pending', message: '이메일 인증을 시작합니다.' });
         const sdk = await loadMagic();
         current();
@@ -125,14 +155,22 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
             }
           },
           onStage: message => onState({ status: 'pending', message }),
-          onAccountReady: () => { attach(provider); attached = true; } });
+          onAccountReady: () => { attach(provider); attached = true; },
+          onVerifyStart: () => { verifyStartedAt = now(); } });
         current();
+        const lifetimeMs = proof.expiresIn * 1000;
+        const deadline = verifyStartedAt + lifetimeMs;
+        if (!Number.isFinite(verifyStartedAt) || !Number.isSafeInteger(lifetimeMs) ||
+            !Number.isFinite(deadline) || now() >= deadline) {
+          throw new MagicConnectorError('SESSION_EXPIRED', '로그인 시간이 만료되었습니다. 다시 로그인해 주세요.');
+        }
         token = proof.accessToken;
+        sessionExpiresAt = deadline;
         result = Object.freeze({ userId: proof.userId, address: proof.address });
         onState({ status: 'signed-in', userId: proof.userId, address: proof.address, message: '로그인했습니다.' });
         return result;
       } catch (error) {
-        if (otpComplete) { try { await logoutOnce(instance); } catch { /* local token remains cleared */ } }
+        if (otpComplete) { try { await queueLogout(instance); } catch { /* local token remains cleared */ } }
         if (activeMagic === instance) clear();
         if (run !== generation) throw new MagicConnectorError('STALE', '로그인 요청이 취소되거나 변경되었습니다.');
         const safe = safeError(error, otpComplete);
@@ -152,10 +190,10 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
     clear();
     onState({ status: 'disconnected', message: '로그아웃했습니다.' });
     if (shouldLogout) {
-      try { await logoutOnce(instance); }
+      try { await queueLogout(instance); }
       catch { throw new MagicConnectorError('LOGOUT_FAILED', 'Magic 로그아웃을 완료하지 못했습니다.'); }
     }
   }
 
-  return Object.freeze({ connect, disconnect, getAccessToken: () => token });
+  return Object.freeze({ connect, disconnect, getAccessToken });
 }

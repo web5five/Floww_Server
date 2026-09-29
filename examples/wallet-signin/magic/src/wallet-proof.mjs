@@ -68,7 +68,7 @@ async function post(fetchFn, path, payload, assertCurrent) {
 }
 
 export async function signInWithMagicProvider({ provider, chainId, origin, fetchFn, assertCurrent, onStage,
-  onAccountReady = () => {} }) {
+  onAccountReady = () => {}, onVerifyStart = () => {} }) {
   if (!provider?.request || !Number.isSafeInteger(chainId) || chainId <= 0 ||
       !validOrigin(origin) || typeof fetchFn !== 'function') throw new ProofError('INVALID_CONFIG');
   assertCurrent();
@@ -88,6 +88,7 @@ export async function signInWithMagicProvider({ provider, chainId, origin, fetch
   assertCurrent();
   if (!SIGNATURE.test(signature ?? '')) throw new ProofError('BAD_SIGNATURE');
   await assertIdentity(provider, address, chainId, assertCurrent);
+  onVerifyStart();
   const result = await post(fetchFn, '/api/v1/auth/wallet/verify', { message, signature }, assertCurrent);
   await assertIdentity(provider, address, chainId, assertCurrent);
   if (typeof result.accessToken !== 'string' || !result.accessToken ||
@@ -96,5 +97,6 @@ export async function signInWithMagicProvider({ provider, chainId, origin, fetch
       !Array.isArray(result.user.wallets) ||
       !result.user.wallets.some(wallet => typeof wallet?.address === 'string' &&
         wallet.address.toLowerCase() === address.toLowerCase())) throw new ProofError('BAD_RESPONSE');
-  return { accessToken: result.accessToken, userId: result.user.userId, address };
+  return { accessToken: result.accessToken, expiresIn: result.expiresIn,
+    userId: result.user.userId, address };
 }

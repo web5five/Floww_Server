@@ -25,6 +25,7 @@ async function until(predicate) {
   assert.fail('Expected pending step was not reached');
 }
 function fixture({ otp = async () => 'discarded-DID', loggedIn = true, chain = '0xaa36a7',
+  logout = async () => {},
   sign = async () => signature, nonceBody = { nonce, message, expiresAt },
   verifyBody = { accessToken: 'synthetic-JWT', tokenType: 'Bearer', expiresIn: 1800,
     user: { userId: 'synthetic-user', wallets: [{ address }] } },
@@ -50,7 +51,7 @@ function fixture({ otp = async () => 'discarded-DID', loggedIn = true, chain = '
       calls.magic.push({ publishableKey, options });
       this.rpcProvider = provider;
       this.auth = { loginWithEmailOTP: async input => { calls.otp.push(input); return otp(input); } };
-      this.user = { isLoggedIn: async () => loggedIn, logout: async () => { calls.logout++; } };
+      this.user = { isLoggedIn: async () => loggedIn, logout: async () => { calls.logout++; await logout(); } };
     }
   }
   const fetchFn = fetchOverride ?? (async (path, options) => {
@@ -212,4 +213,114 @@ test('parallel clicks and repeated connect do not create duplicate OTP or sessio
   await connector.disconnect();
   assert.equal(connector.getAccessToken(), null);
   assert.equal(calls.logout, 1);
+});
+
+test('wallet JWT is reused only before server lifespan ends, then fresh explicit login is required', async () => {
+  let time = 0;
+  const { create, calls } = fixture({ verifyBody: { accessToken: 'synthetic-JWT', tokenType: 'Bearer',
+    expiresIn: 10, user: { userId: 'synthetic-user', wallets: [{ address }] } } });
+  const connector = create({ now: () => time });
+  const first = await connector.connect('person@example.test');
+  time = 9_999;
+  assert.equal(connector.getAccessToken(), 'synthetic-JWT');
+  assert.equal(await connector.connect('person@example.test'), first);
+  assert.equal(calls.otp.length, 1);
+  assert.equal(calls.http.length, 2);
+
+  time = 10_000;
+  assert.equal(connector.getAccessToken(), null);
+  assert.ok(calls.states.some(state => state.status === 'disconnected' && state.message.includes('만료')));
+  const second = await connector.connect('person@example.test');
+  assert.notEqual(second, first);
+  assert.equal(calls.otp.length, 2);
+  assert.equal(calls.http.length, 4);
+  assert.equal(connector.getAccessToken(), 'synthetic-JWT');
+  assert.ok(!JSON.stringify(calls.states).includes('synthetic-JWT'));
+  await connector.disconnect();
+});
+
+test('lifespan starts before verify request so response delay does not extend reuse', async () => {
+  let time = 0;
+  const f = fixture({ fetchOverride: async (path, options) => {
+    f.calls.http.push({ path, options });
+    if (path.endsWith('/nonce')) return { ok: true, json: async () => ({ nonce, message, expiresAt }) };
+    time = 2_000;
+    return { ok: true, json: async () => ({ accessToken: 'synthetic-JWT', tokenType: 'Bearer',
+      expiresIn: 10, user: { userId: 'synthetic-user', wallets: [{ address }] } }) };
+  } });
+  const connector = f.create({ now: () => time });
+  await connector.connect('person@example.test');
+  time = 9_999;
+  assert.equal(connector.getAccessToken(), 'synthetic-JWT');
+  time = 10_000;
+  assert.equal(connector.getAccessToken(), null);
+  assert.equal(f.calls.otp.length, 1);
+});
+
+test('verify response delivered at expiry cannot install a token and permits retry', async () => {
+  let time = 0;
+  let delayed = true;
+  const f = fixture({ fetchOverride: async (path, options) => {
+    f.calls.http.push({ path, options });
+    if (path.endsWith('/nonce')) return { ok: true, json: async () => ({ nonce, message, expiresAt }) };
+    if (delayed) time = 10_000;
+    return { ok: true, json: async () => ({ accessToken: 'synthetic-JWT', tokenType: 'Bearer',
+      expiresIn: 10, user: { userId: 'synthetic-user', wallets: [{ address }] } }) };
+  } });
+  const connector = f.create({ now: () => time });
+  await assert.rejects(connector.connect('person@example.test'), { code: 'SESSION_EXPIRED' });
+  assert.equal(connector.getAccessToken(), null);
+  assert.equal(f.calls.logout, 1);
+  delayed = false;
+  await connector.connect('person@example.test');
+  assert.equal(connector.getAccessToken(), 'synthetic-JWT');
+  await connector.disconnect();
+});
+
+test('expired session clears token immediately and waits for prior Magic logout before new OTP', async () => {
+  let time = 0;
+  const delayedLogout = deferred();
+  const { create, calls } = fixture({ logout: () => delayedLogout.promise,
+    verifyBody: { accessToken: 'synthetic-JWT', tokenType: 'Bearer', expiresIn: 10,
+      user: { userId: 'synthetic-user', wallets: [{ address }] } } });
+  const connector = create({ now: () => time });
+  await connector.connect('person@example.test');
+  time = 10_000;
+  assert.equal(connector.getAccessToken(), null);
+  const next = connector.connect('person@example.test');
+  await until(() => calls.logout === 1);
+  assert.equal(calls.otp.length, 1);
+  delayedLogout.resolve();
+  await next;
+  assert.equal(calls.otp.length, 2);
+  assert.equal(connector.getAccessToken(), 'synthetic-JWT');
+});
+
+test('account-change logout also finishes before reconnecting OTP', async () => {
+  const delayedLogout = deferred();
+  const { create, calls, provider } = fixture({ logout: () => delayedLogout.promise });
+  const connector = create();
+  await connector.connect('person@example.test');
+  provider.emit('accountsChanged', [alternate]);
+  assert.equal(connector.getAccessToken(), null);
+  const next = connector.connect('person@example.test');
+  await until(() => calls.logout === 1);
+  assert.equal(calls.otp.length, 1);
+  delayedLogout.resolve();
+  await next;
+  assert.equal(calls.otp.length, 2);
+});
+
+test('failed prior Magic logout blocks new OTP after local token is cleared', async () => {
+  let time = 0;
+  const { create, calls } = fixture({ logout: async () => { throw new Error('logout unavailable'); },
+    verifyBody: { accessToken: 'synthetic-JWT', tokenType: 'Bearer', expiresIn: 10,
+      user: { userId: 'synthetic-user', wallets: [{ address }] } } });
+  const connector = create({ now: () => time });
+  await connector.connect('person@example.test');
+  time = 10_000;
+  assert.equal(connector.getAccessToken(), null);
+  await assert.rejects(connector.connect('person@example.test'), { code: 'LOGOUT_FAILED' });
+  assert.equal(calls.otp.length, 1);
+  assert.equal(connector.getAccessToken(), null);
 });
