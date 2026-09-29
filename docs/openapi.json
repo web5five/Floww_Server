@@ -3,7 +3,7 @@
   "info": {
     "title": "Floww Server implemented HTTP surface (F015B candidate handoff)",
     "version": "8a5fe58-F015B",
-    "description": "Code-derived development contract through upstream main 8a5fe58 (PR #14 common errors, PR #15 package organization, PR #19 Flyway database migration). PR #19 changes database startup, not these HTTP shapes. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. Email/JWT authentication and optional wallet-signature login are exposed; payment, fulfillment and real-user acceptance are not. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT."
+    "description": "Code-derived development contract through upstream main 8a5fe58 (PR #14 common errors, PR #15 package organization, PR #19 Flyway database migration). PR #19 changes database startup, not these HTTP shapes. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. Email/JWT authentication and optional wallet-signature login are exposed; payment, fulfillment and real-user acceptance are not. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT. Issue #34/#35 adds the /api/v1/tasks Task/Mandate, local pharmacy quote, deterministic policy, EIP-712 approval and idempotent order surface (no payment)."
   },
   "servers": [
     {
@@ -28,6 +28,9 @@
     },
     {
       "name": "Authentication"
+    },
+    {
+      "name": "Tasks (v1)"
     }
   ],
   "paths": {
@@ -2066,6 +2069,1106 @@
           }
         }
       }
+    },
+    "/api/v1/tasks": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "Task + Mandate v1 초안 생성",
+        "description": "Creates a task in AWAITING_APPROVAL with a DRAFT mandate. No spending authority. `confirmed` and any unknown field → 400.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MandateDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Same Idempotency-Key and body replayed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IDEMPOTENCY_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "내 Task 목록",
+        "description": "Newest first.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_LIMIT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}": {
+      "get": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "Task 상세",
+        "description": "Applies lazy expiry (AWAITING_APPROVAL/ACTIVE → EXPIRED when mandate.expiresAt passed).",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/mandate/revisions": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "Mandate 조건 수정 (version+1)",
+        "description": "Previous version → REVOKED; un-ordered attempts → SUPERSEDED; ACTIVE → AWAITING_APPROVAL. Signatures for older versions cannot be reused.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MandateRevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "MANDATE_VERSION_MISMATCH | INVALID_STATE_TRANSITION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/quotes": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "약국 견적 수집",
+        "description": "Collects local pharmacy simulator quotes for the mandate item, or returns unexpired snapshots (same quoteId). recipientAddress is the server registry mapping; quotedPayToAddress is untrusted merchant data kept as evidence.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/proposal-context": {
+      "get": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "AI(#18) 입력",
+        "description": "Field-for-field match of aiproposal.MerchantProposal.Context/Quote. mandateState=ACTIVE means proposals are accepted (task AWAITING_APPROVAL, mandate DRAFT, not expired).",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalContext"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/attempts": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "quote 제안 → 결정론적 정책 판정",
+        "description": "Records an attempt with policy ALLOW or DENY. DENY does not end the task unless 5 attempts are reached or every live quote was denied (→ DECLINED / NO_VALID_CANDIDATE).",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attempt recorded (ALLOW or DENY)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attempt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION | ATTEMPT_LIMIT_REACHED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/attempts/{attemptId}/approval": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "EIP-712 승인 요청 발급",
+        "description": "Only for POLICY_ALLOWED attempts. Server fills every signed field and a single-use bytes32 nonce. An open request is returned again.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION | MANDATE_VERSION_MISMATCH | APPROVAL_INVALIDATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/mandate/confirm": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "위임 확정 (EIP-712 서명 검증)",
+        "description": "Recomputes the digest from stored facts, recovers the signer, requires a wallet linked to the task owner, revalidates mandate/quote/recipient/budget, then consumes the nonce once. Mandate → CONFIRMED, task → ACTIVE.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED | SIGNATURE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN | SIGNER_NOT_TASK_OWNER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND | ATTEMPT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION | MANDATE_VERSION_MISMATCH | APPROVAL_NONCE_INVALID | APPROVAL_EXPIRED | APPROVAL_INVALIDATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/mandate/reject": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "위임 거절",
+        "description": "AWAITING_APPROVAL → DECLINED (USER_REJECTED). Optional body {\"reason\"} is not stored.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/cancel": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "작업 중지",
+        "description": "ACTIVE/EXECUTING → CANCELLED (USER_CANCELLED). Existing orders are not reported as reversed.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INVALID_STATE_TRANSITION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/orders": {
+      "post": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "승인된 attempt 주문 생성 (멱등)",
+        "description": "Requires task ACTIVE and an APPROVED attempt. Revalidates before ordering. Creates a merchant order only; paymentStatus stays NOT_ATTEMPTED. Task → EXECUTING.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Same key and body replayed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "IDEMPOTENCY_CONFLICT | INVALID_STATE_TRANSITION | APPROVAL_INVALIDATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/events": {
+      "get": {
+        "tags": [
+          "Tasks (v1)"
+        ],
+        "summary": "진행 이벤트",
+        "description": "Ascending seq page. Pass nextCursor as after.",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskEventPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TASK_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3092,6 +4195,1017 @@
           "signature"
         ],
         "additionalProperties": false
+      },
+      "MandateDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "goal",
+          "itemId",
+          "maxAmountBaseUnits",
+          "expiresAt"
+        ],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "itemId": {
+            "type": "string",
+            "example": "acetaminophen-500mg-10"
+          },
+          "maxAmountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected.",
+            "example": "60000000"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Future, at most 30 days ahead"
+          },
+          "allowedMerchantIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional. Defaults to every active registry merchant."
+          }
+        }
+      },
+      "MandateRevisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "goal",
+          "itemId",
+          "maxAmountBaseUnits",
+          "expiresAt",
+          "baseVersion"
+        ],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "itemId": {
+            "type": "string",
+            "example": "acetaminophen-500mg-10"
+          },
+          "maxAmountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected.",
+            "example": "60000000"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Future, at most 30 days ahead"
+          },
+          "allowedMerchantIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional. Defaults to every active registry merchant."
+          },
+          "baseVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "TaskAsset": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "chainId",
+          "tokenAddress",
+          "tokenDecimals"
+        ],
+        "properties": {
+          "chainId": {
+            "type": "integer",
+            "example": 11155111
+          },
+          "tokenAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$"
+          },
+          "tokenDecimals": {
+            "type": "integer",
+            "example": 6
+          }
+        }
+      },
+      "AllowedRecipient": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "recipientAddress"
+        ],
+        "properties": {
+          "merchantId": {
+            "type": "string"
+          },
+          "recipientAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$"
+          }
+        }
+      },
+      "TaskMandate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mandateId",
+          "version",
+          "status",
+          "goal",
+          "itemId",
+          "maxAmountBaseUnits",
+          "consumedBaseUnits",
+          "remainingBaseUnits",
+          "budgetScope",
+          "asset",
+          "allowedRecipients",
+          "allowedActions",
+          "expiresAt",
+          "confirmedAt",
+          "confirmationMethod",
+          "authorizationReference"
+        ],
+        "properties": {
+          "mandateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "CONFIRMED",
+              "REVOKED",
+              "EXPIRED"
+            ]
+          },
+          "goal": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "maxAmountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected."
+          },
+          "consumedBaseUnits": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "remainingBaseUnits": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "budgetScope": {
+            "type": "string",
+            "enum": [
+              "TASK_CUMULATIVE"
+            ]
+          },
+          "asset": {
+            "$ref": "#/components/schemas/TaskAsset"
+          },
+          "allowedRecipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllowedRecipient"
+            }
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "PURCHASE"
+              ]
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confirmationMethod": {
+            "type": "string",
+            "enum": [
+              "EIP712"
+            ],
+            "nullable": true
+          },
+          "authorizationReference": {
+            "type": "string",
+            "description": "EIP-712 digest",
+            "nullable": true
+          }
+        }
+      },
+      "Policy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision",
+          "reasonCode",
+          "message",
+          "policyVersion",
+          "decidedAt"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "ALLOW",
+              "DENY"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ko",
+              "en"
+            ],
+            "properties": {
+              "ko": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          },
+          "policyVersion": {
+            "type": "string",
+            "example": "task-policy-v1"
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApprovalRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "method",
+          "digest",
+          "signerAddress",
+          "signedAt"
+        ],
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "EIP712"
+            ]
+          },
+          "digest": {
+            "type": "string"
+          },
+          "signerAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$"
+          },
+          "signedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "orderId",
+          "taskId",
+          "attemptId",
+          "quoteId",
+          "merchantId",
+          "merchantOrderId",
+          "status",
+          "paymentStatus",
+          "amountBaseUnits",
+          "recipientAddress",
+          "createdAt"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "merchantOrderId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "CANCELLED"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_ATTEMPTED"
+            ]
+          },
+          "amountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected."
+          },
+          "recipientAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Attempt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attemptId",
+          "mandateId",
+          "mandateVersion",
+          "quoteId",
+          "merchantId",
+          "proposedBy",
+          "status",
+          "amountBaseUnits",
+          "recipientAddress",
+          "policy",
+          "approval",
+          "order",
+          "payment",
+          "createdAt"
+        ],
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mandateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mandateVersion": {
+            "type": "integer"
+          },
+          "quoteId": {
+            "type": "string",
+            "description": "Proposed quoteId as sent"
+          },
+          "merchantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "proposedBy": {
+            "type": "string",
+            "enum": [
+              "AI",
+              "USER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "POLICY_ALLOWED",
+              "BLOCKED",
+              "APPROVED",
+              "ORDERED",
+              "SUPERSEDED"
+            ]
+          },
+          "amountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected.",
+            "nullable": true
+          },
+          "recipientAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$",
+            "nullable": true
+          },
+          "policy": {
+            "$ref": "#/components/schemas/Policy"
+          },
+          "approval": {
+            "$ref": "#/components/schemas/ApprovalRecord",
+            "nullable": true
+          },
+          "order": {
+            "$ref": "#/components/schemas/Order",
+            "nullable": true
+          },
+          "payment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "txHash"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "NOT_ATTEMPTED"
+                ]
+              },
+              "txHash": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "ownerId",
+          "status",
+          "statusReasonCode",
+          "goal",
+          "mandate",
+          "attempts",
+          "createdAt",
+          "updatedAt",
+          "completedAt"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "AWAITING_APPROVAL",
+              "ACTIVE",
+              "EXECUTING",
+              "COMPLETED",
+              "DECLINED",
+              "FAILED",
+              "EXPIRED",
+              "CANCELLED"
+            ]
+          },
+          "statusReasonCode": {
+            "type": "string",
+            "example": "NO_VALID_CANDIDATE",
+            "nullable": true
+          },
+          "goal": {
+            "type": "string"
+          },
+          "mandate": {
+            "$ref": "#/components/schemas/TaskMandate"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "quoteId",
+          "merchantId",
+          "merchantName",
+          "itemId",
+          "itemName",
+          "quantity",
+          "inStock",
+          "itemAmountBaseUnits",
+          "deliveryFeeBaseUnits",
+          "totalAmountBaseUnits",
+          "asset",
+          "recipientAddress",
+          "quotedPayToAddress",
+          "quotedAt",
+          "expiresAt",
+          "promisedFulfillmentAt",
+          "evidenceMode"
+        ],
+        "properties": {
+          "quoteId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "itemName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "inStock": {
+            "type": "boolean"
+          },
+          "itemAmountBaseUnits": {
+            "type": "string"
+          },
+          "deliveryFeeBaseUnits": {
+            "type": "string"
+          },
+          "totalAmountBaseUnits": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$",
+            "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected."
+          },
+          "asset": {
+            "$ref": "#/components/schemas/TaskAsset"
+          },
+          "recipientAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$",
+            "description": "Server registry mapping (trusted)"
+          },
+          "quotedPayToAddress": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{40}$",
+            "description": "What the merchant quote said (untrusted evidence)"
+          },
+          "quotedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "promisedFulfillmentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidenceMode": {
+            "type": "string",
+            "example": "local_pharmacy_simulator"
+          }
+        }
+      },
+      "QuoteList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "mandateVersion",
+          "quotes"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mandateVersion": {
+            "type": "integer"
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Quote"
+            }
+          }
+        }
+      },
+      "ProposalContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskRef",
+          "mandateRef",
+          "mandateRevision",
+          "itemId",
+          "maximumTotalBaseUnits",
+          "asset",
+          "deadline",
+          "permittedPairs",
+          "requiredFulfillmentBy",
+          "prescriptionEligible",
+          "identityEligible",
+          "mandateState",
+          "quotes"
+        ],
+        "properties": {
+          "taskRef": {
+            "type": "string"
+          },
+          "mandateRef": {
+            "type": "string"
+          },
+          "mandateRevision": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "maximumTotalBaseUnits": {
+            "type": "string",
+            "description": "Remaining task budget"
+          },
+          "asset": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "chainId",
+              "tokenAddress",
+              "decimals"
+            ],
+            "properties": {
+              "chainId": {
+                "type": "string"
+              },
+              "tokenAddress": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{40}$"
+              },
+              "decimals": {
+                "type": "integer"
+              }
+            }
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "permittedPairs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "merchantId",
+                "recipient"
+              ],
+              "properties": {
+                "merchantId": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-f]{40}$"
+                }
+              }
+            }
+          },
+          "requiredFulfillmentBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prescriptionEligible": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "identityEligible": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "mandateState": {
+            "type": "string"
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "quoteId",
+                "merchantId",
+                "recipient",
+                "itemId",
+                "asset",
+                "totalBaseUnits",
+                "expiresAt",
+                "inStock",
+                "promisedFulfillmentAt",
+                "prescriptionRequired",
+                "identityRequired"
+              ],
+              "properties": {
+                "quoteId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-f]{40}$"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "asset": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "chainId",
+                    "tokenAddress",
+                    "decimals"
+                  ],
+                  "properties": {
+                    "chainId": {
+                      "type": "string"
+                    },
+                    "tokenAddress": {
+                      "type": "string",
+                      "pattern": "^0x[0-9a-f]{40}$"
+                    },
+                    "decimals": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "totalBaseUnits": {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]*$",
+                  "description": "Token base units as a decimal integer string (fUSDC decimals=6: \"23500000\" = 23.5 fUSDC). JSON numbers are rejected."
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "inStock": {
+                  "type": "boolean"
+                },
+                "promisedFulfillmentAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "prescriptionRequired": {
+                  "type": "boolean"
+                },
+                "identityRequired": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AttemptRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "quoteId",
+          "proposedBy"
+        ],
+        "properties": {
+          "quoteId": {
+            "type": "string"
+          },
+          "proposedBy": {
+            "type": "string",
+            "enum": [
+              "AI",
+              "USER"
+            ]
+          },
+          "recipientAddress": {
+            "type": "string",
+            "description": "Optional untrusted proposal; must equal the registry mapping or the attempt is denied"
+          }
+        }
+      },
+      "ApprovalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "attemptId",
+          "mandateId",
+          "version",
+          "nonce",
+          "digest",
+          "expiresAt",
+          "typedData"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mandateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "typedData": {
+            "type": "object",
+            "description": "Pass unchanged to eth_signTypedData_v4. domain {name: Floww, version: 1, chainId}; primaryType PurchaseApproval."
+          }
+        }
+      },
+      "ConfirmRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mandateId",
+          "version",
+          "attemptId",
+          "nonce",
+          "signature"
+        ],
+        "properties": {
+          "mandateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{130}$"
+          }
+        }
+      },
+      "OrderRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attemptId"
+        ],
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "TaskEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "seq",
+          "kind",
+          "state",
+          "reasonCode",
+          "attemptId",
+          "actor",
+          "payload",
+          "createdAt"
+        ],
+        "properties": {
+          "seq": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "attemptId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actor": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TaskEventPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "events",
+          "nextCursor",
+          "hasMore"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskEvent"
+            }
+          },
+          "nextCursor": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }
