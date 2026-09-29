@@ -1,5 +1,19 @@
 # F032 Magic PR31 network diagnosis and compatibility handoff
 
+## Controller completion update / 컨트롤러 실제 검증 완료
+
+2026-09-30 KST: the controller received explicit user approval and added only the existing publicnode Sepolia RPC origin to the Floww Magic app CSP. The same previously failing explicit-network probe then returned `0xaa36a7`. Both runnable examples now configure that RPC/chain explicitly, source `4eabeb754f0e4a03b2760c34b08b5783e10c25e6`.
+
+The user entered real Magic OTPs twice in Chrome. First login, logout, and reconnect all passed with the same embedded wallet, strict Sepolia checks, exact SIWE signature and existing server Bearer JWT response. Independent PostgreSQL aggregation confirmed **2 challenges / 2 consumed before expiry / 1 active WALLET user / 1 wallet identity**, correct origin and chain, and no copied email/password. This verifies real Magic authentication to the local backend; it is not a payment or deployed frontend acceptance claim. JWTs, OTPs, signatures and full identity values are excluded from this report.
+
+실제 Magic 이메일 인증 → Sepolia 지갑 → 서버 SIWE 검증/JWT → 로그아웃 → 재로그인을 통과했습니다. DB에서도 두 로그인 증명이 각각 사용됐고 사용자·지갑은 중복 생성되지 않았습니다. 아래 작업자 기록은 설정 변경 이전의 이력으로 보존합니다.
+
+Frozen controller runtime: connector `4eabeb7`, backend code `e86e359` merged as main `6f1d302`, JAR SHA-256 `cc58571cbe975afb7ad1335909b4a81b925c7d88925aaf4c1482c696cae7d7a2`; isolated PostgreSQL16.4 database, localhost4173/8080. No chain execution keys were loaded. Controller independently passed22Node tests, browser bundle, Next component compile and diff checks. CI now runs the same Node/build checks in addition to Java/PostgreSQL verification. Final PR CI and publication state are tracked by PR31, not implied by this historical record.
+
+Remaining product integration: adopt the connector through the frontend's existing server-side wallet session adapter; the standalone example is not already wired into the Next app. Magic login does not grant mandate or spending authority. Confluence worklog remains PENDING_SYNC.
+
+## Original worker record / 원 작업자 기록
+
 - **Task/owner/time:** F032 / `task_2d30c85d382d`, dispatched worker; 2026-09-30 03:57 KST. Controller owns the existing Chrome tab, Magic dashboard/configuration, real OTP, independent validation, push/PR/merge. No chain transaction or payment key was used.
 - **Repository/branch/base:** `Floww_Server`, `feature/magic-wallet-integration`; remote PR31 source `e1f26356cc6575b28e9048b002f8879396d357e5`, prior local F030 head `28994d1eb404aa7a0d97d88b189ff59f948f9056`. `git fetch origin main` found `6f1d3029885808bd35d706b47688b24166ed9273` and a clean local merge produced `306e2788b2e82e5e7ce01beebb2f98ce84fdbfcf`. Scoped source/docs/test commit: `f8a02e4020811b4eb820fff6d1b3c6b0197a12e8`; no worker push or PR update. The current branch differs from `origin/main` only in Magic example/docs and F030/F032 reports, with no Java, Task, chain, DB, shared auth or deployment diff.
 - **Sources/decision status:** Current Confluence read: architecture `11927569` v12, engineering workflow `12517414` v4, AUTH proposal `13729845` v2, nonce proposal `14188566` v1, verify proposal `13434947` v1. Proposals remain proposals; implemented F018 wallet/SIWE contract controls. Magic's [Web SDK reference](https://magic.link/docs/api/client-side-sdks/web) documents `eth_accounts` and `personal_sign` and the Sepolia/custom RPC constructor forms. Its [Ethereum JavaScript guide](https://magic.link/docs/blockchains/featured-chains/ethereum/javascript) requires custom RPC URLs in the Magic app CSP and distinguishes Dedicated Wallet dashboard settings from Universal Wallet support. No Confluence write or team acceptance is claimed.

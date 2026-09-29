@@ -10,6 +10,10 @@ The 2026-09-29 F022 Confluence read found [architecture 11927569 v11](https://w3
 
 ## Run / 실행
 
+**Controller acceptance, 2026-09-30:** Real user OTP → embedded wallet on Sepolia → exact server SIWE signature → JWT, logout and reconnect passed on connector `4eabeb7` against the backend merged in PR41. PostgreSQL confirmed two consumed challenges and one user/wallet identity. This is actual Magic login with a locally hosted backend; public frontend adoption and payment are separate. See [F032 controller update](../reports/F032_RESULT.md).
+
+**실제 로그인 검증:** 사용자 OTP 입력과 재로그인을 포함해 서버 JWT 발급까지 통과했습니다. 공개 프론트 통합·구매 승인은 별도이며 로그인 성공만으로 지출 권한이 생기지 않습니다.
+
 **Current network setup (F032):** Both runnable examples explicitly select `https://ethereum-sepolia-rpc.publicnode.com` with chain ID `11155111`. Add that exact origin to the Magic app's **Content Security Policy** allowlist as well as configuring the frontend's allowed origin. The controller obtained user approval, added this single CSP origin, and observed the same previously failing Magic provider return `0xaa36a7` after reload. This resolves the observed custom-RPC connection failure; the historical F030/F032 diagnostic notes below describe the state before that setting was added. A network probe alone does not establish OTP-to-server-JWT acceptance.
 
 **현재 네트워크 설정:** 두 실행 예시는 위 Sepolia RPC를 명시적으로 사용한다. Magic의 프론트 출처 허용과 RPC용 CSP 허용은 별개다. 사용자 승인 후 해당 CSP 주소만 추가했으며, 같은 Magic 공급자가 새로고침 후 `0xaa36a7`을 반환하는 것을 확인했다. 아래 진단 이력은 설정 추가 전 기록이며, 네트워크 확인 자체가 전체 로그인 성공 증거는 아니다.
