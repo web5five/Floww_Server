@@ -1,0 +1,75 @@
+# F025 Magic wallet compatibility / Magic 지갑 호환성
+
+## Scope / 범위
+
+**KO:** 사용자가 Magic을 선택하면 Magic의 이메일 OTP로 임베디드 지갑을 연다. 그 지갑의 `rpcProvider`가 서버에서 받은 **그대로의** SIWE 메시지에 `personal_sign`으로 서명한다. 서버는 서명에서 복원한 지갑 주소로만 신원을 결정하고 기존 공통 JWT를 발급한다. 이메일, Magic DID, 클라이언트가 표시한 제공자 이름은 서버 신원·계정 연결·결제 권한이 아니다. MetaMask 화면과 서버 공통 인증 파일은 변경하지 않았다.
+
+**EN:** The optional Magic choice opens an embedded wallet after Magic email OTP. Its `rpcProvider` signs the exact server SIWE message with `personal_sign`; the server identifies the recovered wallet address and issues its existing common JWT. Email, DID and client labels do not establish identity, link accounts or authorize spending. The MetaMask page and common server auth are unchanged.
+
+The 2026-09-29 F022 Confluence read found [architecture 11927569 v11](https://w3ph4ai.atlassian.net/wiki/spaces/GH/pages/11927569), [AUTH-00 13729845 v2](https://w3ph4ai.atlassian.net/wiki/spaces/GH/pages/13729845), [AUTH-03 14188566 v1](https://w3ph4ai.atlassian.net/wiki/spaces/GH/pages/14188566), and [AUTH-04 13434947 v1](https://w3ph4ai.atlassian.net/wiki/spaces/GH/pages/13434947). The AUTH pages are proposals; this example uses the implemented [F018 wallet contract](WALLET_SIGNIN_KO_EN.md) and current non-dev wallet JWT integration. Magic API choices follow its [JavaScript SDK reference](https://docs.magic.link/embedded-wallets/sdk/client-side/javascript) and [Ethereum JavaScript guide](https://docs.magic.link/embedded-wallets/blockchains/ethereum/javascript): `loginWithEmailOTP`, Sepolia network, EIP-1193 provider and `personal_sign`. The pinned dependency is `magic-sdk@33.13.0`.
+
+## Run / 실행
+
+**Controller acceptance, 2026-09-30:** Real user OTP → embedded wallet on Sepolia → exact server SIWE signature → JWT, logout and reconnect passed on connector `4eabeb7` against the backend merged in PR41. PostgreSQL confirmed two consumed challenges and one user/wallet identity. This is actual Magic login with a locally hosted backend; public frontend adoption and payment are separate. See [F032 controller update](../reports/F032_RESULT.md).
+
+**실제 로그인 검증:** 사용자 OTP 입력과 재로그인을 포함해 서버 JWT 발급까지 통과했습니다. 공개 프론트 통합·구매 승인은 별도이며 로그인 성공만으로 지출 권한이 생기지 않습니다.
+
+**Current network setup (F032):** Both runnable examples explicitly select `https://ethereum-sepolia-rpc.publicnode.com` with chain ID `11155111`. Add that exact origin to the Magic app's **Content Security Policy** allowlist as well as configuring the frontend's allowed origin. The controller obtained user approval, added this single CSP origin, and observed the same previously failing Magic provider return `0xaa36a7` after reload. This resolves the observed custom-RPC connection failure; the historical F030/F032 diagnostic notes below describe the state before that setting was added. A network probe alone does not establish OTP-to-server-JWT acceptance.
+
+**현재 네트워크 설정:** 두 실행 예시는 위 Sepolia RPC를 명시적으로 사용한다. Magic의 프론트 출처 허용과 RPC용 CSP 허용은 별개다. 사용자 승인 후 해당 CSP 주소만 추가했으며, 같은 Magic 공급자가 새로고침 후 `0xaa36a7`을 반환하는 것을 확인했다. 아래 진단 이력은 설정 추가 전 기록이며, 네트워크 확인 자체가 전체 로그인 성공 증거는 아니다.
+
+Use Node.js 20+ and the package's pinned lockfile:
+
+```sh
+cd examples/wallet-signin/magic
+npm ci
+npm test
+npm run build
+npm run preview
+```
+
+Open `http://127.0.0.1:4173/`. Without `FLOWW_MAGIC_PUBLISHABLE_KEY`, the page visibly stops before Magic SDK construction, OTP or API calls. To attempt real OTP, the Magic app owner must configure a **publishable** `pk_…` key and allow the exact `http://127.0.0.1:4173` origin in Magic, then run `FLOWW_MAGIC_PUBLISHABLE_KEY=<publishable-key> npm run preview`. Never put a Magic secret key, server JWT key, OTP or user token in a client variable or repository. The key was unavailable for F022 and F025; no live OTP or browser wallet acceptance is claimed.
+
+**KO:** 로컬 미리보기의 `/magic-config.mjs`는 형식이 맞는 `pk_` 공개 키만 브라우저에 전달한다. `sk_`처럼 비밀 키로 보이거나 형식이 틀리면 빈 키를 내보내고 로그인 버튼을 비활성화한다. **EN:** The local preview exposes only a valid `pk_` publishable key through `/magic-config.mjs`; secret-like or malformed values produce an empty key and keep sign-in disabled. This does not make a secret key safe to place in a public frontend build variable.
+
+Start the Java server separately with the [F018 server settings](WALLET_SIGNIN_KO_EN.md), including `FLOWW_WALLET_SIGNIN_ENABLED=true`, `FLOWW_WALLET_ORIGIN=http://127.0.0.1:4173`, and `FLOWW_WALLET_CHAIN_IDS=11155111`. The standalone preview binds only `127.0.0.1:4173` and forwards only `POST /api/v1/auth/wallet/nonce` and `POST /api/v1/auth/wallet/verify` to the fixed `http://127.0.0.1:8080` backend. It caps request bodies at 8 KiB. It does not expose business routes or alter the Java auth filter. If the backend is absent, it returns a backend unavailable error; it cannot create a session.
+
+**KO:** 배포 시에는 실제 프론트엔드 origin, 서버 `FLOWW_WALLET_ORIGIN`, Magic 앱의 허용 origin을 동일하게 확인한다. 네트워크는 이 예시에서 Sepolia `11155111`이며 Magic과 서버 허용 체인이 일치해야 한다. 다른 체인은 담당자가 검증한 HTTPS RPC URL, 동일한 체인 ID와 서버 설정을 함께 적용한다.
+
+**EN:** Verify the deployed frontend origin against both server `FLOWW_WALLET_ORIGIN` and the Magic application's allowed origins. This example uses Sepolia `11155111`; a different chain needs an owner-reviewed HTTPS RPC URL, the matching Magic chain ID and matching server allowlist.
+
+## Client and Next.js handoff / 클라이언트·Next.js 인계
+
+The separate [browser page](../examples/wallet-signin/magic/index.html) imports the built module. The [client-only Next.js component](../examples/wallet-signin/magic/next-client/MagicSignin.jsx) imports the same source only on the Magic click path; install the pinned Magic package in that frontend build context. `NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY` is publishable, never a secret or server key. The local [Next rewrite example](../examples/wallet-signin/magic/next-client/next.config.mjs) forwards only the two exact auth routes to a fixed backend; review that destination and use an equivalent narrow same-origin route in deployment. For Next on `http://127.0.0.1:3000`, configure the server SIWE origin and Magic allowed origin to that exact value. There is no arbitrary URL parameter, catch-all proxy or automatic wallet linking.
+
+Inputs: `connect(email)` with an email address, configured `pk_…` publishable key, expected frontend origin, chain ID and Magic network. First Magic OTP completes, then the provider supplies an address and chain. The connector sends `{address, chainId}` to `/nonce`, checks the returned SIWE origin, address, chain, nonce and expiry, signs the exact returned UTF-8 message bytes, and sends only `{message, signature}` to `/verify`. The required server response contains a Bearer `accessToken`, positive `expiresIn`, user ID and the signed wallet address. The connector returns only `{userId, address}` to the UI; `getAccessToken()` holds the JWT in memory and neither displays nor persists it. The DID result is discarded. `disconnect()` clears the token immediately and logs out the authenticated Magic instance. Account, chain and disconnect events invalidate pending work.
+
+**KO:** 세션 재사용은 서버 `expiresIn`에 한정한다. 만료 시각은 `/verify` 요청 **시작**을 기준으로 계산하므로 응답 지연이 사용 시간을 늘리지 않는다. `getAccessToken()` 또는 다음 `connect()`에서 만료를 감지하면 토큰과 로그인 결과를 즉시 지우고 Magic 로그아웃을 시작한다. 새 로그인을 명시적으로 누르면 이전 로그아웃이 끝난 뒤 OTP를 시작한다. 만료 전 중복 클릭만 기존 결과를 재사용하며 JWT 내용을 클라이언트가 임의로 해독해 권한으로 삼지 않는다.
+
+**EN:** Session reuse is bounded by the server's `expiresIn`. The expiry deadline starts when `/verify` is requested, so response latency reduces usable time. On `getAccessToken()` or a later `connect()`, an expired token and cached result are cleared immediately; a fresh explicit login waits for the prior Magic logout before starting OTP. A failed logout blocks fresh OTP until reload. Duplicate calls before expiry reuse the current result. The client does not decode unverified JWT claims as authority.
+
+**KO:** F030에서 이메일 OTP나 지갑 요청이 오래 대기할 때 두 화면에 `인증 취소하고 새로고침` 버튼을 추가했다. 이 버튼은 로컬 세션을 무효화하고 페이지를 새로 시작한다. Magic 요청 자체의 완료나 취소를 주장하지 않으며, 이전 요청이 아직 끝나지 않았다면 같은 페이지에서 새 OTP를 겹쳐 시작하지 않고 `PENDING_SETTLEMENT`로 거절한다. 뒤늦은 OTP 완료는 서버 nonce/verify로 이어지지 않고 Magic 로그아웃을 시도한다. 오류 상태는 단계 코드와 안전한 오류 코드만 제공하며 이메일, OTP, DID, JWT, 서명 또는 원본 제공자 응답을 출력하지 않는다.
+
+**EN:** F030 adds an explicit cancel-and-reload button to both examples for a long-running OTP or wallet request. It invalidates the local session and reloads the page; it does not claim that Magic's pending request was cancelled or completed. If the old request is still unresolved in the same page, a new OTP is rejected with `PENDING_SETTLEMENT` instead of overlapping provider sessions. Late OTP completion cannot reach server nonce/verify and attempts Magic logout. Error state carries a stage and safe code only; it does not print email, OTP, DID, JWT, signature, or raw provider responses.
+
+Magic's embedded UI needs its own frames and connections. The existing Java-served MetaMask example has a restrictive self-only CSP, so it is intentionally **not** used as the Magic host. The standalone preview does not define a production CSP. For a hosted frontend, inspect the current domains used by the selected Magic app and set narrow `frame-src`, `connect-src` and `script-src` permissions through its security review; validate actual OTP in a browser. Avoid wildcard permissions. Magic's [custom-node guidance](https://magic.link/docs/blockchains/featured-chains/ethereum/javascript) also requires its app CSP to allow an owner-selected custom RPC URL.
+
+## Acceptance and ownership / 인수와 담당
+
+The local package's 19 tests cover missing key, OTP cancellation, exact signature bytes, Sepolia, origin/address/chain mismatch, stale completion, account change, malformed response, bounded token reuse, request-delay expiry, delayed and failed logout/reconnect, and preview key filtering. They use a fake SDK/provider and synthetic HTTP responses. The pinned build passes. A no-key browser preview showed the login button disabled and the setup message; only local page assets were requested. Separately, controller-reported F024 packaged-backend checks established wallet-issued JWT profile/execution owner isolation using synthetic EOA signatures; this Magic connector was not part of that HTTP proof.
+
+실제 Magic 앱 공개 키와 허용 origin이 없어 F025에서는 OTP 완료, Magic 지갑 서명, 브라우저에서의 서버 검증을 확인하지 못했다. Geondong Kim 또는 Sinwoo Park가 앱 설정과 CSP를 준비한 뒤 실제 OTP, 지갑 주소, 서버 nonce/verify, 로그아웃 및 재시도를 확인해야 한다. **EN:** A real acceptance pass still needs the app owner to supply a publishable key, configure origin/CSP, complete OTP, inspect the wallet address and server nonce/verify exchange, and verify logout plus retry. Ria Choi owns common JWT/auth integration; Taeheon Choi owns smart-account signer review; Michael and the controller own release review. This package does not evidence a live Magic OTP, transaction, payment, fulfillment, or user acceptance.
+
+### F030 live gate / 실제 로그인 게이트 (2026-09-30 KST)
+
+**KO:** F025의 위 기록은 당시의 검증 결과다. F030에서 컨트롤러는 승인된 브라우저로 실제 OTP 완료를 보고했지만, `magic-sdk@33.13.0`의 `network: 'sepolia'` 구성에서 OTP 전부터 `eth_chainId`가 문자열 `0x1`(Ethereum Mainnet)을 반환한다고 확인했다. 따라서 현재 코드는 서버 nonce 요청 전에 `WRONG_CHAIN`으로 중단한다. 이는 올바른 실패이며 서명·JWT 발급·서버 로그인 성공을 뜻하지 않는다. Magic 공식 문서는 Sepolia 별칭을 설명하고, 고정된 SDK 소스는 `ETH_NETWORK` 매개변수로 이 값을 전달한다. 원인과 실제 네트워크 적용 여부는 계속 확인해야 한다. 승인된 Sepolia RPC를 명시하는 설정은 Magic 앱의 정확한 CSP 허용 여부까지 포함해 실제 브라우저에서 검증해야 한다. 체인 검사나 서버 허용 체인을 완화하지 않는다.
+
+**EN:** The F025 paragraph above is a historical verification record. In F030, the controller reported successful real OTP in an authorized browser, then observed `eth_chainId` return the string `0x1` (Ethereum Mainnet) even before OTP with `magic-sdk@33.13.0` configured as `network: 'sepolia'`. The connector correctly stops with `WRONG_CHAIN` before requesting a server nonce; this is not proof of signing, JWT issuance, or completed server login. Magic's official documentation describes the Sepolia alias, and the pinned SDK forwards it as `ETH_NETWORK`; the cause and effective network remain under investigation. Any explicit Sepolia RPC configuration must be validated in the real browser against the Magic app's exact CSP permissions. Keep strict chain and server allowlist checks.
+
+### F032 provider compatibility and network diagnosis / 공급자 호환성과 네트워크 진단
+
+**KO:** F032에서 고정된 `magic-sdk@33.13.0` 패키지를 직접 인스턴스화해 Sepolia 별칭과 `{rpcUrl, chainId: 11155111}` 객체가 각각 iframe 설정의 `ETH_NETWORK`로 인코딩됨을 검사한다. 이는 SDK 생성자까지의 전달 증거이며 Magic iframe이 실제로 해당 네트워크를 적용했다는 증거는 아니다. 공식 [Web SDK 지원 RPC 목록](https://magic.link/docs/api/client-side-sdks/web)에는 `eth_accounts`와 `personal_sign`이 있다. 이메일 OTP와 `user.isLoggedIn()`이 성공한 뒤 첫 주소 조회는 `eth_accounts`를 사용한다. 계정이 없으면 기존처럼 `NO_ACCOUNT`로 중단한다. 체인 `0xaa36a7` 확인, 서버 SIWE 원문, 서명 복구, JWT 범위는 그대로 유지한다.
+
+**EN:** F032 instantiates the pinned SDK in a compatibility test and checks that both the Sepolia alias and `{rpcUrl, chainId: 11155111}` reach the encoded iframe `ETH_NETWORK` option. This proves constructor propagation, not that Magic's hosted iframe applied the network. Magic's [documented EVM RPC list](https://magic.link/docs/api/client-side-sdks/web) includes `eth_accounts` and `personal_sign`; after successful email OTP and `user.isLoggedIn()`, the first account read now uses `eth_accounts`. An empty result still fails with `NO_ACCOUNT`. Strict Sepolia verification, exact server SIWE bytes, recovered wallet identity and memory-only JWT behavior remain enforced.
+
+The controller's earlier explicit-RPC probe returned Magic `-32603 Failed to fetch`, while a direct call to the same RPC returned `0xaa36a7`. A read-only repeat in the existing browser tab reproduced the Magic error. The controller decoded only safe iframe fields and confirmed `ETH_NETWORK={rpcUrl:'https://ethereum-sepolia-rpc.publicnode.com',chainId:11155111}`, `DOMAIN_ORIGIN=http://localhost:4173`, and SDK version `33.13.0`; the key and full iframe parameters were not printed or stored. The observed failure is therefore **after** the correct network option reaches Magic's hosted iframe. The controller then read the app dashboard's **Settings → Content Security Policy → Edit** view: its existing CSP entry list was empty, and the UI stated that custom RPC requires a `connect-src` entry. This is a concrete missing configuration consistent with `Failed to fetch`; only an owner-authorized exact-origin addition followed by a browser retest can establish causality. Magic's [custom-node instructions](https://magic.link/docs/blockchains/featured-chains/ethereum/javascript) require the selected RPC in the Magic project's CSP. The owner should review adding exactly `https://ethereum-sepolia-rpc.publicnode.com`, without wildcards, through the appropriate Dedicated Wallet dashboard flow or Magic support for Universal Wallet. Top-level console/network logs did not identify a CSP or CORS violation, and iframe child-target network inspection was unavailable, so other provider failures remain possible. No CSP, allowlist or credential was changed here. The existing preview process still serves an older copied connector source, so it cannot validate the F032 build until the controller deliberately refreshes that task-owned runtime.

@@ -1,0 +1,17 @@
+{
+  "name": "floww-optional-magic-wallet-connector",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/magic-connector.mjs --bundle --format=esm --platform=browser --target=es2022 --outfile=dist/magic-connector.js",
+    "test": "node --test src/*.test.mjs",
+    "preview": "node preview-server.mjs"
+  },
+  "dependencies": {
+    "magic-sdk": "33.13.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
