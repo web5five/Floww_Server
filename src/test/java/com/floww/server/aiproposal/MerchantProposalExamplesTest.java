@@ -160,9 +160,11 @@ class MerchantProposalExamplesTest {
             List<String> expectedEligible = expectedFindings.entrySet().stream()
                     .filter(e -> e.getValue().isEmpty()).map(Map.Entry::getKey).toList();
             assertEquals(expectedEligible, sentIds);
-            // F012 translates the injected logical deadline to a wall-clock KilnClient deadline.
-            assertFalse(client.limit.isBefore(wallBefore.plusSeconds(44)));
-            assertFalse(client.limit.isAfter(wallAfter.plusSeconds(46)));
+            // The fixture states the expected budget independently of the production calculation.
+            long expectedSeconds = expected.path("providerBudgetSeconds").asLong(-1);
+            assertTrue(expectedSeconds > 0);
+            assertFalse(client.limit.isBefore(wallBefore.plusSeconds(expectedSeconds)));
+            assertFalse(client.limit.isAfter(wallAfter.plusSeconds(expectedSeconds)));
         }
     }
 

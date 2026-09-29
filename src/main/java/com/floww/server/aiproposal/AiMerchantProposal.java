@@ -17,6 +17,7 @@ import com.floww.server.aiproposal.MerchantProposal.Status;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,43 +76,49 @@ public final class AiMerchantProposal {
             findings.add(new Finding(quote.quoteId(), reasons));
             if (reasons.isEmpty()) eligible.put(quote.quoteId(), quote);
         }
-        if (eligible.isEmpty()) {
-            boolean missingEvidence = findings.stream().flatMap(f -> f.reasons().stream())
-                    .anyMatch(r -> r.endsWith("_EVIDENCE_MISSING"));
-            return result(missingEvidence ? Status.CLARIFICATION_REQUIRED : Status.NO_CANDIDATE,
-                    missingEvidence ? "ELIGIBILITY_EVIDENCE_MISSING" : "NO_ELIGIBLE_QUOTE",
-                    task, mandate, revision, findings, null);
-        }
+        if (eligible.isEmpty()) return noCandidate(task, mandate, revision, findings);
 
-        List<Map<String, Object>> serialized = new ArrayList<>();
-        for (Quote quote : eligible.values()) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("quoteId", quote.quoteId());
-            entry.put("merchantId", quote.merchantId());
-            entry.put("recipient", quote.recipient());
-            entry.put("itemId", quote.itemId());
-            entry.put("asset", quote.asset());
-            entry.put("totalBaseUnits", quote.totalBaseUnits());
-            entry.put("expiresAt", quote.expiresAt().toString());
-            entry.put("promisedFulfillmentAt", quote.promisedFulfillmentAt().toString());
-            serialized.add(entry);
+        String payload = payload(context, eligible.values());
+        Instant atCall = clock.instant();
+        // Each repeat removes at least one stale candidate; this is bounded preparation, not a provider retry.
+        while (true) {
+            if (!context.deadline().isAfter(atCall) || !context.requiredFulfillmentBy().isAfter(atCall))
+                return result(Status.REJECTED, "MANDATE_INACTIVE_OR_EXPIRED", task, mandate, revision, findings, null);
+            boolean stale = false;
+            for (Quote quote : eligible.values()) {
+                if (!quote.expiresAt().isAfter(atCall) || !quote.promisedFulfillmentAt().isAfter(atCall)) {
+                    stale = true;
+                    break;
+                }
+            }
+            if (!stale) break;
+            for (int i = 0; i < quotes.size(); i++) {
+                Quote quote = quotes.get(i);
+                if (!eligible.containsKey(quote.quoteId())) continue;
+                List<String> reasons = reasons(context, quote, maximum, atCall);
+                if (!reasons.isEmpty()) {
+                    eligible.remove(quote.quoteId());
+                    findings.set(i, new Finding(quote.quoteId(), reasons));
+                }
+            }
+            if (eligible.isEmpty()) return noCandidate(task, mandate, revision, findings);
+            payload = payload(context, eligible.values());
+            atCall = clock.instant();
         }
-        String payload;
-        try {
-            payload = JSON.writeValueAsString(Map.of("taskRef", task, "mandateRef", mandate,
-                    "mandateRevision", revision, "maximumTotalBaseUnits", context.maximumTotalBaseUnits(),
-                    "deadline", context.deadline().toString(), "eligibleQuotes", serialized));
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        Instant latestCandidateEnd = eligible.values().stream()
+                .map(q -> q.expiresAt().isBefore(q.promisedFulfillmentAt()) ? q.expiresAt() : q.promisedFulfillmentAt())
+                .max(Instant::compareTo).orElseThrow();
+        Instant logicalLimit = context.deadline().isBefore(context.requiredFulfillmentBy())
+                ? context.deadline() : context.requiredFulfillmentBy();
+        if (latestCandidateEnd.isBefore(logicalLimit)) logicalLimit = latestCandidateEnd;
+        Duration remaining = Duration.between(atCall, logicalLimit);
+        if (remaining.compareTo(Duration.ofSeconds(45)) > 0) remaining = Duration.ofSeconds(45);
+        // KilnClient uses wall time; translate only the freshly remaining logical duration.
+        Instant providerLimit = Instant.now().plus(remaining);
         KilnClient.Result call;
         try {
-            // KilnClient uses the wall clock; translate the remaining logical duration.
-            java.time.Duration remaining = java.time.Duration.between(now, context.deadline());
-            Instant limit = Instant.now().plus(remaining.compareTo(java.time.Duration.ofSeconds(45)) < 0
-                    ? remaining : java.time.Duration.ofSeconds(45));
             call = kiln.next(List.of(Map.of("role", "system", "content", SYSTEM),
-                    Map.of("role", "user", "content", payload)), List.of("propose_purchase"), limit);
+                    Map.of("role", "user", "content", payload)), List.of("propose_purchase"), providerLimit);
         } catch (KilnClient.Failure failure) {
             return result(Status.MODEL_FAILURE, failure.code(), task, mandate, revision, findings,
                     provenance(failure.partial(), failure.attempts()));
@@ -133,6 +140,37 @@ public final class AiMerchantProposal {
                 || !selected.promisedFulfillmentAt().isAfter(after))
             return result(Status.REJECTED, "EXPIRED_DURING_PROPOSAL", task, mandate, revision, findings, provenance);
         return new Result(Status.PROPOSED, null, task, mandate, revision, selected, findings, provenance);
+    }
+
+    private static Result noCandidate(String task, String mandate, String revision, List<Finding> findings) {
+        boolean missingEvidence = findings.stream().flatMap(f -> f.reasons().stream())
+                .anyMatch(r -> r.endsWith("_EVIDENCE_MISSING"));
+        return result(missingEvidence ? Status.CLARIFICATION_REQUIRED : Status.NO_CANDIDATE,
+                missingEvidence ? "ELIGIBILITY_EVIDENCE_MISSING" : "NO_ELIGIBLE_QUOTE",
+                task, mandate, revision, findings, null);
+    }
+
+    private static String payload(Context context, java.util.Collection<Quote> eligible) {
+        List<Map<String, Object>> serialized = new ArrayList<>();
+        for (Quote quote : eligible) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("quoteId", quote.quoteId());
+            entry.put("merchantId", quote.merchantId());
+            entry.put("recipient", quote.recipient());
+            entry.put("itemId", quote.itemId());
+            entry.put("asset", quote.asset());
+            entry.put("totalBaseUnits", quote.totalBaseUnits());
+            entry.put("expiresAt", quote.expiresAt().toString());
+            entry.put("promisedFulfillmentAt", quote.promisedFulfillmentAt().toString());
+            serialized.add(entry);
+        }
+        try {
+            return JSON.writeValueAsString(Map.of("taskRef", context.taskRef(), "mandateRef", context.mandateRef(),
+                    "mandateRevision", context.mandateRevision(), "maximumTotalBaseUnits", context.maximumTotalBaseUnits(),
+                    "deadline", context.deadline().toString(), "eligibleQuotes", serialized));
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static List<String> reasons(Context context, Quote quote, BigInteger maximum, Instant now) {
