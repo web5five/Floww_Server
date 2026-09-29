@@ -1,0 +1,8 @@
+F016 run: 2a03632793d1
+cached base images: present
+Maven package: PASS; JAR SHA-256: 54a7b786f329ee968548f8cf583309f1a7255d8a2256478a201e89140d40a9e8
+Docker image build: PASS
+fresh Flyway V1 and health: PASS
+create/read/evidence/denials/missing provider: PASS
+restart persistence; Flyway V1 present once: PASS
+RESULT PASS; resources cleaned; execution ID: 5be0a9b8-3334-429e-a84e-387d9424a4ca
