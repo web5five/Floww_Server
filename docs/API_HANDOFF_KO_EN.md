@@ -2,11 +2,11 @@
 
 **Scope / 범위:** This specifies the existing AI integration/preliminary verification code and its neighboring implemented routes. It is not a final product API design for the whole service. / 이 문서는 이미 구현된 AI 연동·사전 검증 코드와 인접 경로의 명세입니다. 서비스 전체의 최종 제품 API 설계안이 아닙니다.
 
-**Source / 기준:** `Floww_Server` upstream main `2de6e4191798cca6a10609b557be09a1fcf614a6` (2026-09-29; PR #14 common errors, PR #15 Java packages), integrated locally for F015. [Importable OpenAPI 3.0.3](openapi.json) describes the implemented routes. Every JSON example below is illustrative test data, not a captured production response. Architecture page 11927569 v11 and vision page 12746767 v6 are proposal context, not team API acceptance. / 아래 JSON은 설명용 테스트 데이터이며 아키텍처·비전 문서는 제안 맥락일 뿐 팀 승인 API가 아닙니다.
+**Source / 기준:** `Floww_Server` upstream main `8a5fe582f8d082f085f6bad22ded48896a0f06eb` (2026-09-29; PR #14 common errors, PR #15 Java packages, PR #19 Flyway), integrated locally for F015B. PR #19 changed database startup without changing these HTTP shapes. [Importable OpenAPI 3.0.3](openapi.json) describes the implemented routes. Every JSON example below is illustrative test data, not a captured production response. Architecture page 11927569 v11 and vision page 12746767 v6 are proposal context, not team API acceptance. / PR #19는 DB 기동 방식을 바꿨고 여기의 HTTP 형식은 바꾸지 않았습니다. JSON은 설명용 테스트 데이터이며 아키텍처·비전 문서는 제안 맥락입니다.
 
 ## What runs / 실제 구성
 
-One Java 21 / Spring Boot 3.5.16 application process contains the AI draft and execution modules; PostgreSQL 16.4 is a separate database. Persistence uses Spring JDBC (`JdbcTemplate`) and startup `schema.sql`, not JPA. Development bearer identity is a servlet filter, not Spring Security, Magic login, or wallet authentication. No separately deployed microservices, Python API service, chain signer, or payment adapter exist. / 하나의 Java 애플리케이션 프로세스에 초안 및 실행 모듈이 있고 PostgreSQL은 별도입니다. 영속성은 JDBC와 시작 시 `schema.sql`을 사용합니다. 인증은 개발용 필터이며 Magic·지갑 인증이 아닙니다.
+One Java 21 / Spring Boot 3.5.16 application process contains the AI draft and execution modules; PostgreSQL 16.4 is a separate database. Persistence uses Spring JDBC (`JdbcTemplate`) and Flyway `db/migration/V1__initial_schema.sql`, not JPA or startup `schema.sql`. The V1 path reflects the merged source; an existing populated database upgrade was not locally verified. Development bearer identity is a servlet filter, not Spring Security, Magic login, or wallet authentication. No separately deployed microservices, Python API service, chain signer, or payment adapter exist. / 하나의 Java 애플리케이션 프로세스에 초안 및 실행 모듈이 있고 PostgreSQL은 별도입니다. 영속성은 JDBC와 Flyway V1 마이그레이션을 사용하며 기존 DB 전환은 로컬에서 검증하지 않았습니다. 인증은 개발용 필터이며 Magic·지갑 인증이 아닙니다.
 
 ```mermaid
 flowchart LR

@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Floww Server implemented HTTP surface (F015 candidate handoff)",
-    "version": "2de6e41-F015",
-    "description": "Code-derived development contract through upstream main 2de6e41 (PR #14 common errors, PR #15 package organization). AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. No wallet, signing, payment, fulfillment or real-user acceptance. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT."
+    "title": "Floww Server implemented HTTP surface (F015B candidate handoff)",
+    "version": "8a5fe58-F015B",
+    "description": "Code-derived development contract through upstream main 8a5fe58 (PR #14 common errors, PR #15 package organization, PR #19 Flyway database migration). PR #19 changes database startup, not these HTTP shapes. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. No wallet, signing, payment, fulfillment or real-user acceptance. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT."
   },
   "servers": [
     {
