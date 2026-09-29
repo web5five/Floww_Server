@@ -1,0 +1,77 @@
+{
+  "taskId": "F009",
+  "baseCommit": "0866189cd801cc2d4b381204bf31cd4ae5efed60",
+  "contractVersion": "review-confirmation.v1",
+  "evidenceMode": "local_component_and_postgresql_tests",
+  "command": "./mvnw -B -o verify",
+  "javaMajor": 21,
+  "passed": true,
+  "testCount": 55,
+  "newBindingTests": 13,
+  "suites": [
+    {
+      "suite": "com.floww.server.ExecutionIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.KilnProvenanceTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.MerchantGatewayTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.AiDraftEvaluationTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ControllerDraftBoundaryTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ControllerReviewBindingTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "suite": "com.floww.server.aidraft.ReviewConfirmationBindingTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "sourceSha256": {
+    "src/main/java/com/floww/server/aidraft/ReviewConfirmationBinding.java": "4083d3f75dc2532f90290dbf809be3338c3a5cff06e638915438262aef7c774a",
+    "src/test/java/com/floww/server/aidraft/ReviewConfirmationBindingTest.java": "d2ed0ab218c4806a1f84cbeefe69637ecf0767211132e2c08e95f9d16268dd77",
+    "src/test/java/com/floww/server/aidraft/ControllerReviewBindingTest.java": "232bbdbba6d50b3a49ba6b90f8899ceba9b02486f58e5c782a2c774c66995fa4"
+  },
+  "localPackagedJarSha256": "c01b3d4cc75cba769673541314d7a26f7291614631fd9a0ad93821fdc40ea4ee",
+  "liveProviderCallsThisTask": 0,
+  "realUserApprovalVerified": false,
+  "walletAuthorizationVerified": false,
+  "paymentOrFulfillmentVerified": false,
+  "limitations": [
+    "Trusted confirmation receipt authenticity and current revocation are core-auth adapter obligations.",
+    "A match is not spending authority; atomic reservation, cancellation, signer and settlement enforcement remain unintegrated.",
+    "One independent test fixture initially used an intentionally ambiguous question mark; it was corrected before the passing run."
+  ]
+}
