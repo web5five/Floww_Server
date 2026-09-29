@@ -135,6 +135,18 @@ test('configured chain and Magic network must agree', async () => {
   assert.equal(calls.load, 0);
 });
 
+test('explicit Sepolia RPC configuration is passed to Magic without bypassing chain proof', async () => {
+  const network = { rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com', chainId: 11155111 };
+  const correct = fixture();
+  await correct.create({ network }).connect('person@example.test');
+  assert.deepEqual(correct.calls.magic[0].options.network, network);
+
+  const wrong = fixture({ chain: '0x1' });
+  await assert.rejects(wrong.create({ network }).connect('person@example.test'), { code: 'WRONG_CHAIN' });
+  assert.equal(wrong.calls.http.length, 0);
+  assert.throws(() => correct.create({ network: { ...network, chainId: 1 } }), { code: 'INVALID_CONFIG' });
+});
+
 test('account switch during signature invalidates pending operation before verify', async () => {
   const pendingSign = deferred();
   const { create, calls, provider } = fixture({ sign: () => pendingSign.promise });
