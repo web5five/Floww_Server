@@ -27,7 +27,9 @@ export function MagicSignin() {
       const { createMagicConnector } = await import('../src/magic-connector.mjs');
       if (!mounted.current) return;
       connector.current ??= createMagicConnector({
-        publishableKey: key, network: 'sepolia', chainId: 11155111,
+        publishableKey: key,
+        network: { rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com', chainId: 11155111 },
+        chainId: 11155111,
         origin: window.location.origin,
         onState: state => {
           if (mounted.current) {

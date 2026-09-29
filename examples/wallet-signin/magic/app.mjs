@@ -24,7 +24,9 @@ form.addEventListener('submit', async event => {
   restart.hidden = false;
   try {
     const { createMagicConnector } = await import('./dist/magic-connector.js');
-    connector ??= createMagicConnector({ publishableKey, onState: state => {
+    connector ??= createMagicConnector({ publishableKey,
+      network: { rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com', chainId: 11155111 },
+      onState: state => {
       status.textContent = state.message ?? '';
       if (state.status !== 'signed-in') session.hidden = true;
     } });
