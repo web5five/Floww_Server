@@ -24,8 +24,10 @@ class PublicLandingFilterTest {
         filter.doFilter(landing, new MockHttpServletResponse(), chain);
         assertTrue(filter.shouldNotFilter(landing));
         assertEquals(landing, chain.getRequest());
+        assertTrue(filter.shouldNotFilter(request("GET", "/index.html")));
 
         assertFalse(filter.shouldNotFilter(request("POST", "/")));
+        assertFalse(filter.shouldNotFilter(request("POST", "/index.html")));
         assertFalse(filter.shouldNotFilter(request("GET", "/api/v1/tasks")));
 
         MockHttpServletResponse protectedResponse = new MockHttpServletResponse();

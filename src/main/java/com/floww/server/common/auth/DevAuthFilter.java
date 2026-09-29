@@ -49,7 +49,8 @@ public class DevAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        return (method.equals("GET") && (path.equals("/") || path.equals("/actuator/health")))
+        return (method.equals("GET") && (path.equals("/") || path.equals("/index.html")
+                || path.equals("/actuator/health")))
                 || (method.equals("POST")
                 && (path.equals("/api/v1/auth/email/signup")
                 || path.equals("/api/v1/auth/email/signin")
