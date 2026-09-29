@@ -1,0 +1,15 @@
+*
+!Dockerfile.vercel
+!mvnw
+!.mvn/
+!.mvn/**
+!pom.xml
+!src/
+!src/**
+!examples/
+!examples/wallet-signin/
+!examples/wallet-signin/index.html
+!examples/wallet-signin/app.js
+!examples/wallet-signin/style.css
+!scripts/
+!scripts/vercel-entrypoint.sh
