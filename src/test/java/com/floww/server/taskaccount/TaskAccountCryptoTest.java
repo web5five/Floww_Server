@@ -29,6 +29,18 @@ class TaskAccountCryptoTest {
         assertEquals("0x2556ee7edbd2f09d4eb0fceadc57f52084af74bba5f9804e4b4cb6a9638546ed",
                 TaskAccountCrypto.reviewDigest(review));
     }
+    @Test void mandateHashMatchesPinnedSolidityHashMandateVector() {
+        assertEquals("0xd49e0fea684a687d45bf10f4be251d6c0e067be31659b32688dca889af727cd2",
+                TaskAccountCrypto.mandateHash(11155111,
+                        "0xab86ed8530d3e9d7fb1bae37f5d8ca3d433ba06f",
+                        "0x955ebd34d21848bc686dd1b7904b4731fcf3204bd76df60968eb57277a4c7860",
+                        "0x09f764fb6907993a34ab0367f8932f49361be7d1601f8d3a83fbe3b5a326c2ce",
+                        "0x1390c8745eb49069afd3b89393997e3fa14614f5",
+                        "0x183f66622995afd7e16479e48a98b6241858e1ea",
+                        "0xe75b54381f7fea97783d9464c94153f89ad19d38",
+                        "0x294ccf70e247c689f1cba6a3e4685321780fc151",
+                        BigInteger.valueOf(23_500_000),1790707440));
+    }
     @Test void mandateApprovalMatchesEthersTypedDataEncoder() {
         var approval=new TaskAccountCrypto.Approval("0x00000000000000000000000000000000fac10002",
                 "0x00000000000000000000000000000000fac10001",

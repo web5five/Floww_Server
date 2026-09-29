@@ -171,4 +171,6 @@ scripts/                           # Smoke and fixture evaluation helpers
 
 ## Selected-purchase TaskAccount integration
 
+Frontend integration starts with the [bilingual E2E handoff](docs/FRONTEND_E2E_HANDOFF_KO_EN.md): current client gaps, exact API/wallet sequence, DTOs, recovery behavior and verified versus pending deployment scope.
+
 The optional Sepolia TaskAccount path connects a persisted Task and selected quote to owner approval, exact payment and verified simulated fulfillment. See the [API and configuration guide](docs/TASKACCOUNT_E2E_KO_EN.md) and [independent public-Sepolia evidence](docs/F031_INDEPENDENT_SEPOLIA.md). Enable it explicitly with `FLOWW_TASKACCOUNT_ENABLED=true`; the frontend must use the account approval sequence in that mode.

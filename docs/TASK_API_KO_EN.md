@@ -1,5 +1,7 @@
 # Task API `/api/v1/tasks` — 한/영 연동 문서 (Issues #33 · #34 · #35, parent #32)
 
+**2026-09-30 update:** The TaskAccount chain execution added by merged PR41 supersedes the legacy approval sequence below **when chain mode is enabled**. Start with the [frontend E2E handoff](FRONTEND_E2E_HANDOFF_KO_EN.md); real Kiln/public-Sepolia verification is recorded [separately](F031_INDEPENDENT_SEPOLIA.md). The following scope statements describe the original Task API slice. / 체인 모드의 프론트 연결은 새 핸드오프를 기준으로 하고 아래 설명은 기존 Task API 구현 범위로 읽습니다.
+
 상태 / Status: **구현·로컬 검증 완료, 팀 계약 검토 대기** — implemented and verified locally (PostgreSQL + local pharmacy simulator + local test wallet signatures). Real Kiln calls, Sepolia payment and merchant fulfillment are **not** part of this slice.
 
 근거 / Sources: Confluence “정책과 결정” (2026-09-30), “데이터 명세서”, “개발 문서 · TaskStatus”, API-11~14·16.
