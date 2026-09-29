@@ -63,10 +63,9 @@ public enum ErrorCode {
     /** 회원가입 시 이미 가입된 이메일 (소문자 정규화 후 비교). */
     EMAIL_ALREADY_EXISTS(Category.HTTP, HttpStatus.CONFLICT, false,
             "이미 가입된 이메일입니다", "Email already registered"),
-    /** 비밀번호 규칙 위반. 규칙은 팀 합의 후 확정한다. 응답·로그에 비밀번호 원문을 넣지 않는다. */
-    WEAK_PASSWORD(Category.HTTP, HttpStatus.BAD_REQUEST, false,
+    /** 비밀번호 규칙 위반 (AUTH-05). 규칙은 auth.PasswordPolicy에 있다. 응답·로그에 비밀번호 원문을 넣지 않는다. */
+    PASSWORD_POLICY_VIOLATION(Category.HTTP, HttpStatus.BAD_REQUEST, false,
             "비밀번호가 규칙에 맞지 않습니다", "Password does not meet requirements"),
-    /** 인증은 되었지만 권한 부족. 예: client 토큰(또는 role≠ADMIN)으로 /api/v1/admin/** 호출. */
     FORBIDDEN(Category.HTTP, HttpStatus.FORBIDDEN, false,
             "접근 권한이 없습니다", "Access denied"),
     /** 정지된 계정. 비밀번호 검증을 통과한 뒤에만 응답한다 (계정 존재 여부 노출 방지). */
