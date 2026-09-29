@@ -47,6 +47,15 @@ public final class AiMerchantProposal {
     }
 
     public Result propose(Context context, List<Quote> suppliedQuotes) {
+        return proposeForState(context, suppliedQuotes, "ACTIVE");
+    }
+
+    /** Recommend against an explicitly unapproved DRAFT snapshot; this never grants approval. */
+    public Result proposePreapproval(Context context, List<Quote> suppliedQuotes) {
+        return proposeForState(context, suppliedQuotes, "DRAFT");
+    }
+
+    private Result proposeForState(Context context, List<Quote> suppliedQuotes, String requiredState) {
         if (context == null) return result(Status.CLARIFICATION_REQUIRED, "CONTEXT_MISSING", null, null, null, List.of(), null);
         String task = context.taskRef(), mandate = context.mandateRef(), revision = context.mandateRevision();
         if (!text(task) || !text(mandate) || !text(revision) || !text(context.itemId())
@@ -56,19 +65,19 @@ public final class AiMerchantProposal {
                 || context.mandateState() == null) {
             return result(Status.CLARIFICATION_REQUIRED, "BOUNDARY_MISSING", task, mandate, revision, List.of(), null);
         }
-        if (!asset(context.asset()) || amount(context.maximumTotalBaseUnits()) == null
+        if (!asset(context.asset()) || ExactBaseUnits.positive(context.maximumTotalBaseUnits()) == null
                 || context.permittedPairs().size() > MAX_QUOTES || !validPairs(context.permittedPairs())
                 || suppliedQuotes == null || suppliedQuotes.size() > MAX_QUOTES || !validQuoteMappings(suppliedQuotes)) {
             return result(Status.REJECTED, "INPUT_INVALID", task, mandate, revision, List.of(), null);
         }
         Instant now = clock.instant();
-        if (!"ACTIVE".equals(context.mandateState()) || !context.deadline().isAfter(now)
+        if (!requiredState.equals(context.mandateState()) || !context.deadline().isAfter(now)
                 || !context.requiredFulfillmentBy().isAfter(now)
                 || context.requiredFulfillmentBy().isAfter(context.deadline())) {
             return result(Status.REJECTED, "MANDATE_INACTIVE_OR_EXPIRED", task, mandate, revision, List.of(), null);
         }
         List<Quote> quotes = List.copyOf(suppliedQuotes);
-        BigInteger maximum = amount(context.maximumTotalBaseUnits());
+        BigInteger maximum = ExactBaseUnits.positive(context.maximumTotalBaseUnits());
         List<Finding> findings = new ArrayList<>();
         Map<String, Quote> eligible = new LinkedHashMap<>();
         for (Quote quote : quotes) {
@@ -135,7 +144,7 @@ public final class AiMerchantProposal {
         if (selected == null)
             return result(Status.REJECTED, "MODEL_QUOTE_NOT_ELIGIBLE", task, mandate, revision, findings, provenance);
         Instant after = clock.instant();
-        if (!"ACTIVE".equals(context.mandateState()) || !context.deadline().isAfter(after)
+        if (!requiredState.equals(context.mandateState()) || !context.deadline().isAfter(after)
                 || !selected.expiresAt().isAfter(after) || !context.requiredFulfillmentBy().isAfter(after)
                 || !selected.promisedFulfillmentAt().isAfter(after))
             return result(Status.REJECTED, "EXPIRED_DURING_PROPOSAL", task, mandate, revision, findings, provenance);
@@ -176,7 +185,7 @@ public final class AiMerchantProposal {
     private static List<String> reasons(Context context, Quote quote, BigInteger maximum, Instant now) {
         List<String> reasons = new ArrayList<>();
         if (!text(quote.quoteId()) || !text(quote.merchantId()) || !text(quote.recipient())
-                || !text(quote.itemId()) || !asset(quote.asset()) || amount(quote.totalBaseUnits()) == null
+                || !text(quote.itemId()) || !asset(quote.asset()) || ExactBaseUnits.positive(quote.totalBaseUnits()) == null
                 || quote.expiresAt() == null || quote.promisedFulfillmentAt() == null) {
             reasons.add("QUOTE_MALFORMED");
             return reasons;
@@ -184,7 +193,7 @@ public final class AiMerchantProposal {
         if (!context.itemId().equals(quote.itemId())) reasons.add("ITEM_MISMATCH");
         if (!context.asset().equals(quote.asset())) reasons.add("ASSET_MISMATCH");
         if (!context.permittedPairs().contains(new Pair(quote.merchantId(), quote.recipient()))) reasons.add("RECIPIENT_NOT_PERMITTED");
-        if (amount(quote.totalBaseUnits()).compareTo(maximum) > 0) reasons.add("OVER_BUDGET");
+        if (ExactBaseUnits.positive(quote.totalBaseUnits()).compareTo(maximum) > 0) reasons.add("OVER_BUDGET");
         if (!quote.expiresAt().isAfter(now)) reasons.add("QUOTE_EXPIRED");
         if (!quote.inStock()) reasons.add("OUT_OF_STOCK");
         if (!quote.promisedFulfillmentAt().isAfter(now)
@@ -231,10 +240,6 @@ public final class AiMerchantProposal {
     private static boolean asset(Asset value) {
         return value != null && text(value.chainId()) && text(value.tokenAddress())
                 && value.decimals() >= 0 && value.decimals() <= 255;
-    }
-    private static BigInteger amount(String value) {
-        if (value == null || !value.matches("[1-9][0-9]{0,37}")) return null;
-        return new BigInteger(value);
     }
     private static JsonNode strictArgs(String raw) {
         if (raw == null || raw.length() > 2048) return null;

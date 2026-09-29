@@ -33,7 +33,7 @@ The repository contains several useful backend slices at different maturity leve
 
 - **Legacy execution API** — persists an owner-bound, explicitly confirmed *test mandate*, runs a bounded Kiln/tool conversation against a configured loopback merchant fixture, and records policy and model evidence.
 - **AI draft endpoint** — `POST /api/ai/drafts` returns clarification questions or a structured model proposal. `READY_FOR_REVIEW` means the proposal is structurally complete; it is **not** user approval or spending authority.
-- **AI merchant proposal component** — a Java component for proposing from merchant options. It has a documented contract and examples, but is not yet wired to an HTTP route or the shared Task API.
+- **AI Task proposal integration** — `POST /api/v1/tasks/{taskId}/ai-proposal` reads the authenticated owner’s persisted DRAFT mandate and quotes, calls Kiln outside the Task lock, and submits a fresh recommendation to the existing deterministic policy service. See the [integration contract](docs/AI_TASK_INTEGRATION_KO_EN.md). A proposal does not approve or execute a payment.
 - **Optional wallet sign-in** — an opt-in SIWE-style EOA sign-in path issues the existing client JWT. Wallet sign-in proves account control; it does not approve a purchase.
 - **Persistence and evidence** — PostgreSQL-backed records, Flyway migrations, owner-scoped reads, bounded event history, and evidence export.
 
