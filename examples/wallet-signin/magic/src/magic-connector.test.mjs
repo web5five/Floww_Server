@@ -116,6 +116,8 @@ test('wrong chain, substituted address and substituted origin stop before signin
   const wrongChain = fixture({ chain: '0x1' });
   await assert.rejects(wrongChain.create().connect('person@example.test'), { code: 'WRONG_CHAIN' });
   assert.equal(wrongChain.calls.http.length, 0);
+  assert.ok(wrongChain.calls.states.some(state => state.status === 'error' &&
+    state.stage === 'wallet-chain' && state.code === 'WRONG_CHAIN'));
   const wrongAddress = fixture({ nonceBody: { nonce, message: message.replace(address, alternate), expiresAt } });
   await assert.rejects(wrongAddress.create().connect('person@example.test'), { code: 'BAD_CHALLENGE' });
   assert.equal(wrongAddress.calls.rpc.some(call => call.method === 'personal_sign'), false);
@@ -169,10 +171,14 @@ test('disconnect during OTP or verify discards late completion and logs out once
   const loginOne = one.connect('person@example.test');
   await until(() => first.calls.otp.length === 1);
   await one.disconnect();
+  await assert.rejects(one.connect('person@example.test'), { code: 'PENDING_SETTLEMENT' });
+  assert.equal(first.calls.otp.length, 1);
   pendingOtp.resolve('discarded-DID');
   await assert.rejects(loginOne, { code: 'STALE' });
   assert.equal(first.calls.http.length, 0);
   assert.equal(first.calls.logout, 1);
+  await one.connect('person@example.test');
+  assert.equal(first.calls.otp.length, 2);
 
   const pendingVerify = deferred();
   const second = fixture({ fetchOverride: async (path, options) => {

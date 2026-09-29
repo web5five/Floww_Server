@@ -72,22 +72,24 @@ export async function signInWithMagicProvider({ provider, chainId, origin, fetch
   if (!provider?.request || !Number.isSafeInteger(chainId) || chainId <= 0 ||
       !validOrigin(origin) || typeof fetchFn !== 'function') throw new ProofError('INVALID_CONFIG');
   assertCurrent();
-  onStage('지갑을 확인합니다.');
+  onStage('wallet-account', '지갑을 확인합니다.');
   const accounts = await provider.request({ method: 'eth_requestAccounts' });
   assertCurrent();
   const address = accounts?.[0];
   if (!ADDRESS.test(address ?? '')) throw new ProofError('NO_ACCOUNT');
   onAccountReady(provider, address);
+  onStage('wallet-chain', '지갑 체인을 확인합니다.');
   await assertIdentity(provider, address, chainId, assertCurrent);
-  onStage('로그인 메시지를 준비합니다.');
+  onStage('server-nonce', '로그인 메시지를 준비합니다.');
   const challenge = await post(fetchFn, '/api/v1/auth/wallet/nonce', { address, chainId }, assertCurrent);
   const message = validateChallenge(challenge, address, chainId, origin);
   await assertIdentity(provider, address, chainId, assertCurrent);
-  onStage('로그인 메시지에 서명해 주세요.');
+  onStage('wallet-signature', '로그인 메시지에 서명해 주세요.');
   const signature = await provider.request({ method: 'personal_sign', params: [utf8Hex(message), address] });
   assertCurrent();
   if (!SIGNATURE.test(signature ?? '')) throw new ProofError('BAD_SIGNATURE');
   await assertIdentity(provider, address, chainId, assertCurrent);
+  onStage('server-verify', '서버에서 지갑 서명을 확인합니다.');
   onVerifyStart();
   const result = await post(fetchFn, '/api/v1/auth/wallet/verify', { message, signature }, assertCurrent);
   await assertIdentity(provider, address, chainId, assertCurrent);

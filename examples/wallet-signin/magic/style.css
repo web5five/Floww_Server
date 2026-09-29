@@ -18,6 +18,8 @@ input:focus { border-color: #a4f2da; box-shadow: 0 0 0 3px #a4f2da22; }
 button { cursor: pointer; font: inherit; }
 #connect { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 14px; padding: 0 19px; height: 54px; border: 0; border-radius: 11px; color: #102322; background: #a4f2da; font-weight: 800; }
 #connect:hover:not(:disabled) { background: #c1ffe9; }
+#restart { margin-top: 12px; border: 1px solid #9bc6b9; border-radius: 8px; padding: 9px 12px; color: #d6f8eb; background: transparent; }
+#restart[hidden] { display: none; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 #status { min-height: 22px; margin: 20px 0 0; color: #c9d7e4; font-size: 13px; line-height: 1.5; }
 .session { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; padding: 15px; border: 1px solid #456d68; border-radius: 12px; background: #15342e; }

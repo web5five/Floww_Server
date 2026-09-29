@@ -3,6 +3,7 @@ import { publishableKey } from './magic-config.mjs';
 const form = document.querySelector('#signin');
 const email = document.querySelector('#email');
 const button = document.querySelector('#connect');
+const restart = document.querySelector('#restart');
 const status = document.querySelector('#status');
 const session = document.querySelector('#session');
 const address = document.querySelector('#address');
@@ -20,6 +21,7 @@ form.addEventListener('submit', async event => {
   if (busy || button.disabled) return;
   busy = true;
   button.disabled = true;
+  restart.hidden = false;
   try {
     const { createMagicConnector } = await import('./dist/magic-connector.js');
     connector ??= createMagicConnector({ publishableKey, onState: state => {
@@ -33,8 +35,15 @@ form.addEventListener('submit', async event => {
     session.hidden = true;
   } finally {
     busy = false;
+    restart.hidden = true;
     button.disabled = !/^pk_[A-Za-z0-9_-]{8,}$/.test(publishableKey);
   }
+});
+
+restart.addEventListener('click', () => {
+  if (!busy) return;
+  void connector?.disconnect().catch(() => {});
+  window.location.reload();
 });
 
 disconnect.addEventListener('click', async () => {

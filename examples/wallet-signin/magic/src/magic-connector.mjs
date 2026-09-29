@@ -25,7 +25,7 @@ function safeError(error, otpComplete) {
   if (error instanceof MagicConnectorError) return error;
   const code = error instanceof ProofError ? error.code : otpComplete ? 'WALLET_SIGNIN_FAILED' : 'MAGIC_OTP_FAILED';
   const messages = {
-    WRONG_CHAIN: '설정된 체인으로 전환한 뒤 다시 시도해 주세요.',
+    WRONG_CHAIN: 'Magic 지갑의 체인이 설정된 체인과 다릅니다. 네트워크 설정을 확인해 주세요.',
     ACCOUNT_CHANGED: '지갑 계정이 변경되었습니다. 다시 로그인해 주세요.',
     BAD_CHALLENGE: '로그인 메시지가 설정된 출처·주소·체인과 일치하지 않습니다.',
     BAD_RESPONSE: '서버 로그인 응답을 확인할 수 없습니다.',
@@ -52,6 +52,7 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
   let activeProvider = null;
   let listeners = null;
   let pending = null;
+  let pendingRun = null;
   const logoutPromises = new WeakMap();
   let logoutBarrier = Promise.resolve();
   let logoutFailed = false;
@@ -115,7 +116,11 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
       return Promise.reject(error);
     }
     if (!validEmail(email)) return Promise.reject(new MagicConnectorError('INVALID_EMAIL', '올바른 이메일을 입력해 주세요.'));
-    if (pending) return pending;
+    if (pending) {
+      if (pendingRun === generation) return pending;
+      return Promise.reject(new MagicConnectorError('PENDING_SETTLEMENT',
+        '이전 이메일 인증 요청이 아직 끝나지 않았습니다. 새로고침 후 다시 시도해 주세요.'));
+    }
     if (result && getAccessToken()) return Promise.resolve(result);
 
     const run = ++generation;
@@ -127,6 +132,7 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
       let instance;
       let otpComplete = false;
       let verifyStartedAt = null;
+      let stage = 'email-otp';
       try {
         await logoutBarrier;
         current();
@@ -154,7 +160,10 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
               throw new MagicConnectorError('STALE', '로그인 요청이 취소되거나 변경되었습니다.');
             }
           },
-          onStage: message => onState({ status: 'pending', message }),
+          onStage: (nextStage, message) => {
+            stage = nextStage;
+            onState({ status: 'pending', stage, message });
+          },
           onAccountReady: () => { attach(provider); attached = true; },
           onVerifyStart: () => { verifyStartedAt = now(); } });
         current();
@@ -174,12 +183,15 @@ export function createMagicConnector({ publishableKey, chainId = SEPOLIA_CHAIN_I
         if (activeMagic === instance) clear();
         if (run !== generation) throw new MagicConnectorError('STALE', '로그인 요청이 취소되거나 변경되었습니다.');
         const safe = safeError(error, otpComplete);
-        onState({ status: 'error', code: safe.code, message: safe.message });
+        onState({ status: 'error', stage, code: safe.code, message: safe.message });
         throw safe;
       }
     };
-    const promise = work().finally(() => { if (pending === promise) pending = null; });
+    const promise = work().finally(() => {
+      if (pending === promise) { pending = null; pendingRun = null; }
+    });
     pending = promise;
+    pendingRun = run;
     return pending;
   }
 

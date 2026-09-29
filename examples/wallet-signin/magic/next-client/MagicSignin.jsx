@@ -54,6 +54,12 @@ export function MagicSignin() {
     finally { if (mounted.current) { setAddress(''); setBusy(false); } }
   }
 
+  function restart() {
+    if (!busy) return;
+    void connector.current?.disconnect().catch(() => {});
+    window.location.reload();
+  }
+
   return <section aria-label="Magic 지갑 로그인">
     <form onSubmit={signIn}>
       <label htmlFor="magic-email">이메일 주소</label>
@@ -61,6 +67,7 @@ export function MagicSignin() {
         onChange={event => setEmail(event.target.value)} />
       <button type="submit" disabled={!available || busy}>Magic으로 로그인</button>
     </form>
+    {busy && <button type="button" onClick={restart}>인증 취소하고 새로고침</button>}
     <p role="status">{available ? status : 'Magic 앱 설정이 필요합니다.'}</p>
     {address && <div><p>연결된 지갑: {address.slice(0, 8)}…{address.slice(-6)}</p>
       <button type="button" disabled={busy} onClick={signOut}>로그아웃</button></div>}
