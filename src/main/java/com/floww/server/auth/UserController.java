@@ -1,5 +1,7 @@
 package com.floww.server.auth;
 
+import com.floww.server.common.error.ApiException;
+import com.floww.server.common.error.ErrorCode;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -17,7 +19,15 @@ public class UserController {
 
     @GetMapping("/me")
     public UserResponse me(
-            @RequestAttribute(name = "owner", required = false) UUID owner) {
-        return userService.me(owner);
+            @RequestAttribute(name = "owner", required = false) String owner) {
+        if (owner == null) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+        }
+
+        try {
+            return userService.me(UUID.fromString(owner));
+        } catch (IllegalArgumentException invalidOwner) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+        }
     }
 }

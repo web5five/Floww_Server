@@ -15,8 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.context.annotation.Profile;
 
 @Component
+@Profile("dev")
 public class DevAuthFilter extends OncePerRequestFilter {
     private final String aliceToken;
     private final String bobToken;
@@ -38,7 +40,10 @@ public class DevAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().equals("/actuator/health");
+        String path = request.getServletPath();
+        return path.equals("/actuator/health")
+                || path.startsWith("/api/v1/auth/email/")
+                || path.equals("/api/v1/admin/auth/signin");
     }
 
     @Override
