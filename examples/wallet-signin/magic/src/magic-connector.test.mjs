@@ -40,7 +40,7 @@ function fixture({ otp = async () => 'discarded-DID', loggedIn = true, chain = '
     emit(name, value) { listeners.get(name)?.(value); },
     async request(args) {
       calls.rpc.push(args);
-      if (args.method === 'eth_requestAccounts' || args.method === 'eth_accounts') return [this.account];
+      if (args.method === 'eth_accounts') return [this.account];
       if (args.method === 'eth_chainId') return this.chain;
       if (args.method === 'personal_sign') return sign(args.params);
       throw new Error('unexpected provider method');
@@ -102,6 +102,8 @@ test('Sepolia signs exact server SIWE UTF-8 bytes and verifies through fixed rou
   assert.deepEqual(calls.http.map(call => call.path), ['/api/v1/auth/wallet/nonce', '/api/v1/auth/wallet/verify']);
   assert.deepEqual(calls.http[0].payload, { address, chainId: 11155111 });
   assert.deepEqual(calls.http[1].payload, { message, signature });
+  assert.equal(calls.rpc[0].method, 'eth_accounts');
+  assert.equal(calls.rpc.some(call => call.method === 'eth_requestAccounts'), false);
   assert.deepEqual(calls.rpc.find(call => call.method === 'personal_sign').params,
     ['0x' + Buffer.from(message, 'utf8').toString('hex'), address]);
   assert.equal(calls.http[1].options.credentials, 'same-origin');

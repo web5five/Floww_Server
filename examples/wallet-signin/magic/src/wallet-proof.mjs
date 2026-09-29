@@ -73,7 +73,9 @@ export async function signInWithMagicProvider({ provider, chainId, origin, fetch
       !validOrigin(origin) || typeof fetchFn !== 'function') throw new ProofError('INVALID_CONFIG');
   assertCurrent();
   onStage('wallet-account', '지갑을 확인합니다.');
-  const accounts = await provider.request({ method: 'eth_requestAccounts' });
+  // Magic email OTP has already authenticated the wallet; eth_accounts is the
+  // documented, non-interactive account read for its provider.
+  const accounts = await provider.request({ method: 'eth_accounts' });
   assertCurrent();
   const address = accounts?.[0];
   if (!ADDRESS.test(address ?? '')) throw new ProofError('NO_ACCOUNT');
