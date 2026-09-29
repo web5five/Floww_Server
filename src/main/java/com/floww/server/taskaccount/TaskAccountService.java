@@ -131,6 +131,10 @@ public class TaskAccountService {
         require(getterAddress(rpc.read(a.address(),"fulfillmentReporter()")).equals(a.reporter()));
         require(getterNumber(rpc.read(a.address(),"maxSpend()")).equals(a.amount()));
         require(getterNumber(rpc.read(a.address(),"expiresAt()")).equals(BigInteger.valueOf(a.expiresAt().getEpochSecond())));
+        String expectedMandateHash=TaskAccountCrypto.mandateHash(a.chainId(),a.owner(),a.chainTaskId(),
+                a.reviewDigest(),a.token(),a.recipient(),a.executor(),a.reporter(),a.amount(),
+                a.expiresAt().getEpochSecond());
+        require(rpc.read(a.address(),"mandateHash()").equalsIgnoreCase(expectedMandateHash));
         require(!getterNumber(rpc.read(a.address(),"revoked()")).equals(BigInteger.ONE));
     }
     public AccountView bind(UUID owner,UUID taskId,String accountAddress,String txHash) {
