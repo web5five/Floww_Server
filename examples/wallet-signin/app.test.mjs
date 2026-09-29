@@ -8,12 +8,21 @@ const message = 'Sign in to Floww\n한글';
 const address = '0x' + '1'.repeat(40);
 
 function element() {
-  return {
+  const node = {
     value: '', hidden: false, disabled: false, textContent: '', handlers: new Map(), options: [],
     addEventListener(name, fn) { this.handlers.set(name, fn); },
-    append(option) { this.options.push(option); if (!this.value) this.value = option.value; },
-    fire(name) { return this.handlers.get(name)?.(); }
+    append(option) {
+      this.options.push(option);
+      option.remove = () => { this.options = this.options.filter(item => item !== option); };
+      if (this.options.length === 1) this.value = option.value;
+    },
+    querySelector(selector) {
+      const value = selector.match(/^option\[value="(.+)"\]$/)?.[1];
+      return this.options.find(option => option.value === value);
+    },
+    fire(name, ...args) { return this.handlers.get(name)?.(...args); }
   };
+  return node;
 }
 
 function provider() {
@@ -23,20 +32,24 @@ function provider() {
     account: address,
     chain: '0xaa36a7',
     sign: async () => '0x' + '2'.repeat(130),
+    permission: async function () { return [this.account]; },
+    switch: async function () { this.chain = '0xaa36a7'; this.emit('chainChanged', this.chain); },
     on(name, fn) { listeners.set(name, fn); },
     removeListener(name, fn) { if (listeners.get(name) === fn) listeners.delete(name); },
-    emit(name) { listeners.get(name)?.(); },
+    emit(name, value) { listeners.get(name)?.(value); },
     async request({ method, params }) {
-      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [this.account];
+      if (method === 'eth_requestAccounts') return this.permission();
+      if (method === 'eth_accounts') return [this.account];
       if (method === 'eth_chainId') return this.chain;
       if (method === 'personal_sign') return this.sign(params);
+      if (method === 'wallet_switchEthereumChain') return this.switch(params);
       throw Error(method);
     }
   };
 }
 
-function boot(wallet = provider()) {
-  const nodes = Object.fromEntries(['#provider', '#status', '#connect', '#retry'].map(id => [id, element()]));
+function boot(wallet = provider(), { announceOnRequest, fetchImpl } = {}) {
+  const nodes = Object.fromEntries(['#provider', '#status', '#connect', '#retry', '#switch-chain'].map(id => [id, element()]));
   const windowEvents = new Map();
   const calls = [];
   const context = {
@@ -44,12 +57,13 @@ function boot(wallet = provider()) {
     window: {
       ethereum: wallet,
       addEventListener(name, fn) { windowEvents.set(name, fn); },
-      dispatchEvent() { }
+      dispatchEvent(event) { if (event.type === 'eip6963:requestProvider') announceOnRequest?.(windowEvents.get('eip6963:announceProvider')); }
     },
     Event: class { constructor(type) { this.type = type; } },
     TextEncoder,
     async fetch(path, options) {
       calls.push({ path, body: JSON.parse(options.body) });
+      if (fetchImpl) return fetchImpl(path, options);
       return { ok: true, json: async () => path.endsWith('/nonce')
         ? { message, nonce: 'a'.repeat(48) }
         : { accessToken: 'synthetic-token', user: { userId: 'synthetic-user' } } };
@@ -58,6 +72,19 @@ function boot(wallet = provider()) {
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'app.js' });
   return { nodes, wallet, calls, windowEvents, context };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
+}
+async function until(predicate) {
+  while (!predicate()) await new Promise(resolve => setImmediate(resolve));
+}
+function announce(windowEvents, uuid, wallet, name = 'MetaMask') {
+  windowEvents.get('eip6963:announceProvider')({ detail: { info: { uuid, name }, provider: wallet } });
 }
 
 test('MetaMask signs exact UTF-8 bytes as RPC hex and verifies once', async () => {
@@ -133,4 +160,204 @@ test('stale rejected request cannot clear a newer successful session', async () 
   await oldRun;
   assert.equal(vm.runInContext('accessToken', context), 'synthetic-token');
   assert.match(nodes['#status'].textContent, /synthetic-user/);
+});
+
+test('missing provider has a disabled placeholder and late announcement recovers', async () => {
+  const { nodes, calls, windowEvents } = boot(null);
+  assert.equal(nodes['#provider'].disabled, true);
+  assert.equal(nodes['#provider'].options[0].disabled, true);
+  assert.equal(nodes['#connect'].disabled, true);
+  assert.match(nodes['#status'].textContent, /MetaMask/);
+  assert.equal(calls.length, 0);
+  announce(windowEvents, 'late-wallet', provider());
+  assert.equal(nodes['#provider'].disabled, false);
+  assert.equal(nodes['#provider'].value, 'late-wallet');
+  assert.equal(nodes['#connect'].disabled, false);
+  assert.equal(nodes['#provider'].options.length, 1);
+  await nodes['#connect'].fire('click');
+  assert.match(nodes['#status'].textContent, /synthetic-user/);
+});
+
+test('announced provider replaces matching injected fallback but keeps distinct wallets', () => {
+  const injected = provider();
+  const { nodes, windowEvents } = boot(injected);
+  announce(windowEvents, 'metamask-announced', injected);
+  assert.deepEqual(nodes['#provider'].options.map(option => option.value), ['metamask-announced']);
+  assert.equal(nodes['#provider'].value, 'metamask-announced');
+  announce(windowEvents, 'another-uuid', injected);
+  assert.equal(nodes['#provider'].options.length, 1);
+  announce(windowEvents, 'other-wallet', provider(), 'Other wallet');
+  assert.equal(nodes['#provider'].options.length, 2);
+  assert.equal(nodes['#provider'].value, 'metamask-announced');
+});
+
+test('synchronous EIP-6963 discovery prevents fallback duplicate', () => {
+  const injected = provider();
+  const { nodes } = boot(injected, { announceOnRequest: listener => listener({
+    detail: { info: { uuid: 'announced', name: 'MetaMask' }, provider: injected }
+  }) });
+  assert.deepEqual(nodes['#provider'].options.map(option => option.value), ['announced']);
+});
+
+test('initial permission accountsChanged for returned account continues to one verify', async () => {
+  const { nodes, wallet, calls, context } = boot();
+  wallet.permission = async function () {
+    this.emit('accountsChanged', [this.account]);
+    return [this.account];
+  };
+  await nodes['#connect'].fire('click');
+  assert.equal(calls.filter(call => call.path.endsWith('/nonce')).length, 1);
+  assert.equal(calls.filter(call => call.path.endsWith('/verify')).length, 1);
+  assert.equal(vm.runInContext('accessToken', context), 'synthetic-token');
+  assert.equal(nodes['#connect'].disabled, false);
+});
+
+test('conflicting account announcement during permission fails before nonce and restores controls', async () => {
+  const { nodes, wallet, calls } = boot();
+  wallet.permission = async function () {
+    this.emit('accountsChanged', ['0x' + '3'.repeat(40)]);
+    return [this.account];
+  };
+  await nodes['#connect'].fire('click');
+  assert.equal(calls.length, 0);
+  assert.match(nodes['#status'].textContent, /계정/);
+  assert.equal(nodes['#connect'].disabled, false);
+});
+
+test('pending permission blocks repeat clicks and reports wallet pending code without raw RPC text', async () => {
+  const { nodes, wallet, calls } = boot();
+  const permission = deferred();
+  let requests = 0;
+  wallet.permission = () => { requests++; return permission.promise; };
+  const first = nodes['#connect'].fire('click');
+  assert.equal(nodes['#connect'].disabled, true);
+  await nodes['#connect'].fire('click');
+  assert.equal(requests, 1);
+  permission.reject({ code: -32002, message: 'wallet_requestPermissions -32002 raw text' });
+  await first;
+  assert.match(nodes['#status'].textContent, /이전 요청/);
+  assert.doesNotMatch(nodes['#status'].textContent, /wallet_requestPermissions|32002/);
+  assert.equal(nodes['#connect'].disabled, false);
+  assert.equal(calls.length, 0);
+});
+
+test('permission cancellation restores controls and does not call the server', async () => {
+  const { nodes, wallet, calls } = boot();
+  wallet.permission = async () => { throw { code: 4001 }; };
+  await nodes['#connect'].fire('click');
+  assert.match(nodes['#status'].textContent, /취소/);
+  assert.equal(nodes['#connect'].disabled, false);
+  assert.equal(calls.length, 0);
+});
+
+test('real account switch while signing invalidates and late signature cannot verify', async () => {
+  const { nodes, wallet, calls, context } = boot();
+  const signature = deferred();
+  wallet.sign = () => signature.promise;
+  const pending = nodes['#connect'].fire('click');
+  await until(() => calls.some(call => call.path.endsWith('/nonce')));
+  await until(() => nodes['#status'].textContent.includes('서명'));
+  wallet.account = '0x' + '3'.repeat(40);
+  wallet.emit('accountsChanged', [wallet.account]);
+  assert.equal(nodes['#connect'].disabled, false);
+  signature.resolve('0x' + '2'.repeat(130));
+  await pending;
+  assert.equal(calls.filter(call => call.path.endsWith('/verify')).length, 0);
+  assert.equal(vm.runInContext('accessToken', context), null);
+});
+
+test('chain switch while signing invalidates and late signature cannot verify', async () => {
+  const { nodes, wallet, calls, context } = boot();
+  const signature = deferred();
+  wallet.sign = () => signature.promise;
+  const pending = nodes['#connect'].fire('click');
+  await until(() => nodes['#status'].textContent.includes('서명'));
+  wallet.chain = '0x1';
+  wallet.emit('chainChanged', wallet.chain);
+  signature.resolve('0x' + '2'.repeat(130));
+  await pending;
+  assert.equal(calls.filter(call => call.path.endsWith('/verify')).length, 0);
+  assert.equal(vm.runInContext('accessToken', context), null);
+  assert.equal(nodes['#connect'].disabled, false);
+});
+
+test('chain change during verify discards delayed success and restores controls', async () => {
+  const verify = deferred();
+  const { nodes, wallet, calls, context } = boot(provider(), {
+    fetchImpl: async path => path.endsWith('/nonce')
+      ? { ok: true, json: async () => ({ message }) }
+      : verify.promise
+  });
+  const pending = nodes['#connect'].fire('click');
+  await until(() => calls.some(call => call.path.endsWith('/verify')));
+  wallet.chain = '0x1';
+  wallet.emit('chainChanged', '0x1');
+  assert.equal(nodes['#connect'].disabled, false);
+  verify.resolve({ ok: true, json: async () => ({ accessToken: 'late-token', user: { userId: 'late-user' } }) });
+  await pending;
+  assert.equal(vm.runInContext('accessToken', context), null);
+  assert.doesNotMatch(nodes['#status'].textContent, /late-user/);
+});
+
+test('account switch during verify discards delayed success', async () => {
+  const verify = deferred();
+  const { nodes, wallet, calls, context } = boot(provider(), {
+    fetchImpl: async path => path.endsWith('/nonce')
+      ? { ok: true, json: async () => ({ message }) }
+      : verify.promise
+  });
+  const pending = nodes['#connect'].fire('click');
+  await until(() => calls.some(call => call.path.endsWith('/verify')));
+  wallet.account = '0x' + '3'.repeat(40);
+  wallet.emit('accountsChanged', [wallet.account]);
+  verify.resolve({ ok: true, json: async () => ({ accessToken: 'late-token', user: { userId: 'late-user' } }) });
+  await pending;
+  assert.equal(vm.runInContext('accessToken', context), null);
+  assert.equal(nodes['#connect'].disabled, false);
+});
+
+test('Sepolia switch is user triggered and restarts login for same provider and account', async () => {
+  const { nodes, wallet, calls } = boot();
+  wallet.chain = '0x1';
+  let requested;
+  wallet.switch = async function (params) {
+    requested = params;
+    this.chain = '0xaa36a7';
+    this.emit('chainChanged', this.chain);
+  };
+  await nodes['#connect'].fire('click');
+  assert.equal(calls.length, 0);
+  assert.equal(nodes['#switch-chain'].hidden, false);
+  await nodes['#switch-chain'].fire('click');
+  assert.deepEqual(JSON.parse(JSON.stringify(requested)), [{ chainId: '0xaa36a7' }]);
+  assert.equal(calls.filter(call => call.path.endsWith('/verify')).length, 1);
+  assert.match(nodes['#status'].textContent, /synthetic-user/);
+});
+
+test('rejected Sepolia switch stays recoverable and never starts nonce', async () => {
+  const { nodes, wallet, calls } = boot();
+  wallet.chain = '0x1';
+  wallet.switch = async () => { throw { code: 4001 }; };
+  await nodes['#connect'].fire('click');
+  await nodes['#switch-chain'].fire('click');
+  assert.match(nodes['#status'].textContent, /취소/);
+  assert.equal(nodes['#switch-chain'].hidden, false);
+  assert.equal(nodes['#connect'].disabled, false);
+  assert.equal(calls.length, 0);
+});
+
+test('account change while Sepolia switch is pending cannot restart login', async () => {
+  const { nodes, wallet, calls } = boot();
+  wallet.chain = '0x1';
+  const switchResult = deferred();
+  wallet.switch = () => switchResult.promise;
+  await nodes['#connect'].fire('click');
+  const pending = nodes['#switch-chain'].fire('click');
+  await until(() => nodes['#status'].textContent.includes('전환을'));
+  wallet.account = '0x' + '3'.repeat(40);
+  wallet.emit('accountsChanged', [wallet.account]);
+  switchResult.resolve();
+  await pending;
+  assert.equal(calls.length, 0);
+  assert.equal(nodes['#connect'].disabled, false);
 });

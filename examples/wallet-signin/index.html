@@ -12,9 +12,10 @@
   <h1>MetaMask로 로그인</h1>
   <p>MetaMask에서 시작하고, 지원 지갑에서 로그인 메시지에 서명합니다. 로그인은 지출 승인과 별개입니다.</p>
   <label for="provider">지갑 선택</label>
-  <select id="provider" aria-label="지갑 선택"></select>
-  <button id="connect" type="button">연결하고 로그인</button>
+  <select id="provider" aria-label="지갑 선택" disabled></select>
+  <button id="connect" type="button" disabled>연결하고 로그인</button>
   <button id="retry" type="button" hidden>다시 시도</button>
+  <button id="switch-chain" type="button" hidden>Sepolia로 전환</button>
   <p id="status" role="status" aria-live="polite"></p>
 </main>
 <script type="module" src="/wallet-signin-example/app.js"></script>

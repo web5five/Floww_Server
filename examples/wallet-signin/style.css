@@ -1,4 +1,5 @@
 :root { font: 16px/1.5 system-ui, sans-serif; color: #172033; background: #f5f7fb; }
 main { max-width: 40rem; margin: 5vh auto; padding: 2rem; background: white; border-radius: 1rem; }
 button, select { font: inherit; padding: .6rem .9rem; margin: .4rem .4rem .4rem 0; }
+button:disabled, select:disabled { cursor: not-allowed; opacity: .6; }
 #status { min-height: 3rem; white-space: pre-wrap; }
