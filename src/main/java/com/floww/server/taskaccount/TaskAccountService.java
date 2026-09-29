@@ -46,8 +46,10 @@ public class TaskAccountService {
                               String deployTxHash,String chainTaskId,String reviewSnapshotDigest,String amountBaseUnits,
                               String tokenAddress,String recipientAddress,String executorAddress,String fulfillmentReporter,
                               Instant quoteExpiresAt,Instant expiresAt,String deploymentData,String approvalDigest,
-                              String paymentId,String paymentTxHash,Instant paymentVerifiedAt,String fulfillmentId,
-                              String fulfillmentEvidenceHash,String fulfillmentTxHash,Instant fulfillmentVerifiedAt) { }
+                              String approvalTxHash,String approvalOperationState,String paymentId,String paymentTxHash,
+                              String paymentOperationState,Instant paymentVerifiedAt,String fulfillmentId,
+                              String fulfillmentEvidenceMode,String fulfillmentEvidenceHash,String fulfillmentTxHash,
+                              String fulfillmentOperationState,Instant fulfillmentVerifiedAt) { }
     public record ApprovalView(Map<String,Object> typedData,String digest,String nonce,Instant expiresAt) { }
     public record FundingView(String accountAddress,String tokenAddress,String amountBaseUnits,String tokenApproveData,
                               String accountFundData,String accountTokenBalanceBaseUnits,boolean mandateApproved) { }
@@ -72,8 +74,16 @@ public class TaskAccountService {
                 a.reviewDigest(),a.token(),a.recipient(),a.executor(),a.reporter(),a.amount(),a.expiresAt().getEpochSecond()) : null;
         return new AccountView(a.taskId(),a.attemptId(),a.state(),a.owner(),a.address(),a.deployTx(),a.chainTaskId(),
                 a.reviewDigest(),a.amount().toString(),a.token(),a.recipient(),a.executor(),a.reporter(),
-                a.quoteExpiresAt(),a.expiresAt(),data,a.approvalDigest(),a.paymentId(),a.paymentTx(),
-                a.paymentVerifiedAt(),a.fulfillmentId(),a.evidenceHash(),a.fulfillmentTx(),a.fulfillmentVerifiedAt());
+                a.quoteExpiresAt(),a.expiresAt(),data,a.approvalDigest(),operationHash(a,"APPROVAL"),
+                operationState(a,"APPROVAL"),a.paymentId(),a.paymentTx(),operationState(a,"PAYMENT"),
+                a.paymentVerifiedAt(),a.fulfillmentId(),a.fulfillmentId()==null?null:pharmacies.evidenceMode(),
+                a.evidenceHash(),a.fulfillmentTx(),operationState(a,"FULFILLMENT"),a.fulfillmentVerifiedAt());
+    }
+    private String operationHash(TaskAccountRepository.Account a,String kind) {
+        return repo.operation(a.id(),kind).map(TaskAccountRepository.Operation::hash).orElse(null);
+    }
+    private String operationState(TaskAccountRepository.Account a,String kind) {
+        return repo.operation(a.id(),kind).map(TaskAccountRepository.Operation::state).orElse(null);
     }
     @Transactional
     public AccountView prepare(UUID owner,UUID taskId,UUID attemptId,String wallet) {
@@ -105,7 +115,6 @@ public class TaskAccountService {
                 Map.of("reviewSnapshotDigest",a.reviewDigest(),"chainTaskId",a.chainTaskId(),"quoteId",q.externalQuoteId()));
         return view(repo.byTask(taskId).orElseThrow(),true);
     }
-    @Transactional(readOnly=true)
     public AccountView get(UUID owner,UUID taskId) {enabled();return view(owned(owner,taskId),true);}
     private String write(Object value) {try{return json.writeValueAsString(value);}catch(JsonProcessingException e){throw new IllegalStateException(e);}}
     private static String getterAddress(String value) {return "0x"+value.substring(26).toLowerCase(Locale.ROOT);}

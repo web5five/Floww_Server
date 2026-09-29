@@ -218,6 +218,7 @@ class TaskAccountHttpIntegrationTest {
         assertEquals("ACTIVE",ok(HttpMethod.GET,prefix,owner,null,null,200).path("status").asText());
         JsonNode pending=ok(HttpMethod.POST,prefix+"/account/approve",owner,null,Map.of(),200);
         assertEquals("APPROVAL_UNKNOWN",pending.path("state").asText());
+        assertEquals("UNKNOWN",pending.path("approvalOperationState").asText());
         String approvalHash=db.queryForObject("SELECT tx_hash FROM task_account_operations WHERE kind='APPROVAL' AND account_id=(SELECT id FROM task_accounts WHERE task_id=?::uuid)",String.class,id);
         assertEquals(1,FIXTURE.sends.get());
         ok(HttpMethod.POST,prefix+"/account/approve",owner,null,Map.of(),200);
@@ -258,6 +259,17 @@ class TaskAccountHttpIntegrationTest {
         assertEquals(2,FIXTURE.sends.get());
         String paymentId=unknown.path("paymentId").asText(),paymentHash=unknown.path("paymentTxHash").asText();
         FIXTURE.paymentId=paymentId;
+        // A reverted or event-mismatched receipt cannot create PAID or trigger another payment.
+        FIXTURE.receipts.put(paymentHash,Map.of("status","0x0","transactionHash",paymentHash,"to",ACCOUNT,"logs",List.of()));
+        assertEquals(409,call(HttpMethod.POST,prefix+"/account/reconcile",owner,null,Map.of()).getStatusCode().value());
+        assertEquals("UNKNOWN",db.queryForObject("SELECT payment_status FROM merchant_orders WHERE task_id=?::uuid",String.class,id));
+        assertEquals("REVERTED",ok(HttpMethod.GET,prefix+"/account",owner,null,null,200).path("paymentOperationState").asText());
+        assertEquals(2,FIXTURE.sends.get());
+        FIXTURE.receipts.put(paymentHash,receipt(paymentHash,List.of()));
+        assertEquals(409,call(HttpMethod.POST,prefix+"/account/reconcile",owner,null,Map.of()).getStatusCode().value());
+        assertEquals("UNKNOWN",db.queryForObject("SELECT payment_status FROM merchant_orders WHERE task_id=?::uuid",String.class,id));
+        assertEquals("MISMATCH",ok(HttpMethod.GET,prefix+"/account",owner,null,null,200).path("paymentOperationState").asText());
+        assertEquals("EXECUTING",ok(HttpMethod.GET,prefix,owner,null,null,200).path("status").asText());
         FIXTURE.receipts.put(paymentHash,receipt(paymentHash,List.of(
                 log(ACCOUNT,List.of(topic("PaymentExecuted(bytes32,bytes32,bytes32,address,address,uint256)"),
                         FIXTURE.taskId,FIXTURE.mandateHash,paymentId),"0x"+word(FIXTURE.token)+word(FIXTURE.recipient)+word(23_500_000)),
@@ -268,6 +280,7 @@ class TaskAccountHttpIntegrationTest {
         assertEquals("PAID",db.queryForObject("SELECT payment_status FROM merchant_orders WHERE task_id=?::uuid",String.class,id));
         JsonNode unknownFulfillment=ok(HttpMethod.POST,prefix+"/account/fulfillment",owner,null,Map.of(),200);
         assertEquals("FULFILLMENT_UNKNOWN",unknownFulfillment.path("state").asText());
+        assertEquals("local_pharmacy_simulator",unknownFulfillment.path("fulfillmentEvidenceMode").asText());
         String fhash=unknownFulfillment.path("fulfillmentTxHash").asText();FIXTURE.evidenceHash=unknownFulfillment.path("fulfillmentEvidenceHash").asText();
         FIXTURE.receipts.put(fhash,receipt(fhash,List.of(log(ACCOUNT,List.of(topic("FulfillmentConfirmed(bytes32,bytes32,bytes32,address)"),
                 FIXTURE.taskId,paymentId,"0x"+word(REPORT.getAddress())),"0x"+word(FIXTURE.evidenceHash)))));
