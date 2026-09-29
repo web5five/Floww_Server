@@ -1,6 +1,6 @@
 # F031 TaskAccount purchase handoff / TaskAccount 구매 인계
 
-Status 2026-09-30 KST: local Java/PostgreSQL/loopback-RPC verification. Public Sepolia and user wallet acceptance are pending controller work. This document describes callable code in this branch; it does not claim live funds or medicine delivery.
+Status 2026-09-30 KST: PR41 is merged; controller public-Sepolia backend E2E passed55checks. See [actual chain evidence](F031_INDEPENDENT_SEPOLIA.md) and the [frontend integration handoff](FRONTEND_E2E_HANDOFF_KO_EN.md). Frontend-user and hosted acceptance remain separate. The original worker verification record below is historical; fulfillment remains simulated.
 
 ## Mode and authority / 모드와 권한
 
@@ -35,7 +35,7 @@ The **only** purchase signature is the contract's EIP-712 `MandateApproval(addre
 
 All paths use `/api/v1/tasks/{taskId}` and `Authorization: Bearer <owner JWT>`. Examples omit unrelated Task response fields. Empty POST bodies may be `{}`.
 
-1. Existing Task and quote/AI route: `POST /api/v1/tasks` with an idempotency key, `POST /{taskId}/quotes`, `POST /{taskId}/ai-proposal` if configured, then `POST /{taskId}/attempts`. The AI result remains a recommendation; `POLICY_ALLOWED` is required. B's `64000000` exceeds a `60000000` cap and C's quoted payee mismatches the trusted registry, so both record DENY and produce no account or signed transaction.
+1. Existing Task and quote/AI route: `POST /api/v1/tasks` with an idempotency key, `POST /{taskId}/quotes`, then empty-body `POST /{taskId}/ai-proposal` if configured. Reuse the returned attempt; do not create it again. Use `POST /{taskId}/attempts` only for a separate explicit/manual proposal or DENY test. The AI result remains a recommendation; a policy-ALLOW (`POLICY_ALLOWED`) attempt is required. B's `64000000` exceeds a `60000000` cap and C's quoted payee mismatches the trusted registry, so both record DENY and produce no account or signed transaction.
 2. `POST /{taskId}/account/prepare` body `{"attemptId":"<UUID>","ownerAddress":"0x<owner wallet>"}`. Returns `state=PREPARED`, `chainTaskId`, `reviewSnapshotDigest`, exact amount/recipient/token/expiry, and `deploymentData`. Only the Task owner's linked wallet can be the constructor sender. One account row is reserved per Task, so another selected attempt cannot obtain concurrent spending authority.
 3. The owner sends a contract-creation transaction with `data=deploymentData`, `to=null` on Sepolia. `POST /{taskId}/account/bind` body `{"accountAddress":"0x<deployed>","deploymentTxHash":"0x<tx hash>"}`. The server checks successful receipt and contract address, `from=owner`, `to=null`, exact pinned init bytecode plus constructor arguments, deployed runtime template, all immutable getters, and chain ID. A malicious contract with copied getters fails code/constructor checks.
 4. `POST /{taskId}/account/approval-request` returns `typedData`, `digest`, `nonce`, `expiresAt`. The browser calls `eth_signTypedData_v4` with **that** typed data. `POST /{taskId}/account/signature` body `{"signature":"0x<65-byte signature>"}` verifies the recovered Task-owner wallet, on-chain digest/nonce, current policy and frozen review; Task becomes ACTIVE. Legacy approval is not reused.
