@@ -1,5 +1,6 @@
 package com.floww.server.auth;
 
 public enum AuthProvider {
-    EMAIL
+    EMAIL,
+    WALLET
 }
