@@ -27,4 +27,8 @@ public record UserResponse(
                 List.of(),
                 user.createdAt());
     }
+
+    public UserResponse withWallets(List<Object> linkedWallets) {
+        return new UserResponse(userId, email, displayName, role, providers, linkedWallets, createdAt);
+    }
 }
