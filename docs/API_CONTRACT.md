@@ -1,5 +1,7 @@
 # Floww Server F006 API and integration contract
 
+For the complete current route inventory, response examples, and importable OpenAPI, see the [bilingual API handoff](API_HANDOFF_KO_EN.md) and [OpenAPI 3.0.3](openapi.json). This page focuses on the legacy F006 local quote-policy/evidence flow; `POST /api/ai/drafts` is a separate F010 proposal-only development route.
+
 This Java 21/Spring Boot service persists an explicitly confirmed, owner-bound mandate, a loopback test-merchant quote, the Kiln tool conversation, and a **local policy precheck**. `REVIEWED` means a quote passed that precheck. No endpoint pays, signs, broadcasts, verifies fulfillment, or calls a real merchant. `TEST_USDC` is a test denomination; no price conversion or funded wallet is implied.
 
 ## Local run from a clean checkout
@@ -62,6 +64,7 @@ Every `/api` request requires `Authorization: Bearer <local development token>`.
 | --- | --- |
 | `POST /api/executions` | `Idempotency-Key` and `{"confirmed":true,"mandate":{"goal":"...","itemId":"item-1","maxTotal":"10.00","currency":"TEST_USDC","recipient":"merchant_good","expiresAt":"<future ISO-8601>"}}`; same owner/key/body replays one ID, changed body is 409 |
 | `POST /api/executions/{id}/run` | One claim, then bounded merchant/Kiln loop. A second claim is 409. |
+| `GET /api/executions?limit=50` | Owner's newest executions as a JSON **array**, maximum 100; no cursor in this response. |
 | `GET /api/executions/{id}` | Owner's persisted execution. |
 | `GET /api/executions/history?limit=50&before=<execution-id>` | Stable `(created_at,id)` descending cursor, maximum 100; `nextCursor` is the last ID. |
 | `GET /api/executions/{id}/events?after=0&limit=50` | Ordered `seq` cursor and `hasMore`, maximum 100. |
