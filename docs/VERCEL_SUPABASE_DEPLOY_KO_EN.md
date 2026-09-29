@@ -1,16 +1,16 @@
 # Vercel + Supabase deployment preparation / 배포 준비
 
-Status: **Supabase project provisioned; Vercel backend not deployed** (2026-09-29). This is a proposed replacement for Render, not evidence of a working public demo. The current DevOps proposal in Confluence (page `14417921`, version 1, checked 2026-09-29) still recommends Render and explicitly requires a hosting decision; this preparation does not silently change that team decision.
+Status: **Supabase V1–V4 verified; Vercel backend not yet deployed** (2026-09-30). This is a proposed replacement for Render, not evidence of a working public demo. The DevOps proposal in Confluence (page `14417921`, version 1, checked 2026-09-29) still recommends Render and explicitly requires a hosting decision; this preparation does not silently change that team decision.
 
 ## 한국어
 
 ### 구성과 확인된 범위
 
-- `web5five/Floww_Server`의 루트 `Dockerfile.vercel`을 **백엔드 서비스 하나**로 빌드한다. 프런트엔드 저장소의 Vercel 프로젝트는 별도로 결정한다. A/B/C 약국마다 백엔드나 DB를 만들지 않는다. 다중 상점 식별·연동은 비즈니스 구현으로 해결해야 하며, 현재 테스트 상점 어댑터는 loopback 전용이므로 실제 A/B/C 약국 연동이 준비됐다는 뜻은 아니다.
+- `web5five/Floww_Server`의 루트 `Dockerfile.vercel`을 **백엔드 서비스 하나**로 빌드한다. 프런트엔드 저장소의 Vercel 프로젝트는 별도로 결정한다. A/B/C 약국마다 백엔드나 DB를 만들지 않는다. 최신 Task API에는 같은 서버 안의 결정적 3개 약국 시뮬레이터가 있지만 수취 주소는 placeholder이고 주문의 `paymentStatus`는 `NOT_ATTEMPTED`다. 레거시 실행 경로의 테스트 상점 어댑터는 여전히 loopback 전용이다. 실제 약국·결제·이행을 뜻하지 않는다.
 - 컨테이너는 Java 21로 소스에서 JAR를 빌드하며 런타임에는 비root 사용자로 실행한다. `vercel` Spring 프로필은 `0.0.0.0:${PORT:8080}`에 바인딩한다. Vercel 프로젝트 환경변수에도 `PORT=8080`을 설정해야 라우터와 앱 포트가 일치한다. `EXPOSE`와 Dockerfile의 `ENV`만으로 Vercel 라우터 설정을 입증할 수 없다.
 - DB, 실행·증거·지갑 nonce 등 영속 데이터는 PostgreSQL에 있다. 현재 요청 경로에서 스케줄러/백그라운드 워커는 발견되지 않았다. 그러나 실행을 `RUNNING`으로 기록한 뒤 컨테이너가 종료되면 `CREATED`만 재청구하는 코드 때문에 자동 복구가 불가능하다. **실행 중단·타임아웃 시 재시도/종결 정책은 코어 백엔드 담당자 확인 전까지 배포 수용 조건으로 남긴다.** 로컬 파일이나 컨테이너 메모리에 영속 상태를 두지 않는다.
-- `main`의 인증 통합 이후 `vercel` 프로필에서는 `JwtAuthFilter`가 발급된 JWT를 업무 API에 검증하며 개발용 Alice/Bob 토큰은 `dev` 프로필 전용이다. 공개 배포에는 최소 32바이트의 서버 전용 `JWT_SIGNING_KEY`가 필요하다. 로컬 테스트 토큰을 공개 프런트엔드에 넣지 않는다.
-- Supabase에는 사용자의 개인 Free `Floww` 조직 아래 **`Floww-demo` 프로젝트 한 개**를 서울 리전에 만들었다([대시보드](https://supabase.com/dashboard/project/vpmifrlwrbtfwgacojvk)). Supabase가 요구하는 조직 컨테이너의 유형이 `Personal`이며, 팀 조직·별도 A/B/C 프로젝트를 만들거나 유료 플랜으로 전환하지 않았다. Data API는 꺼 두고 DB 연결의 SSL 강제를 켰다. 실제 DB는 PostgreSQL 17.6이며 Flyway V1–V3가 성공했다. 계정 소유자는 개인이므로 팀 접근·장기 소유권은 별도 결정이 필요하다.
+- `main`의 인증 통합 이후 `vercel` 프로필에서는 `JwtAuthFilter`가 발급된 JWT를 업무 API에 검증하며 개발용 Alice/Bob 토큰은 `dev` 프로필 전용이다. 공개 배포에는 최소 32바이트의 안정적인 서버 전용 `JWT_SIGNING_KEY`가 필요하다. `FLOWW_CORS_ALLOWED_ORIGINS`는 지정한 정확한 HTTPS 출처만 허용하고 기본값은 빈 목록이다. 로컬 테스트 토큰을 공개 프런트엔드에 넣거나 `*` CORS를 사용하지 않는다.
+- Supabase에는 사용자의 개인 Free `Floww` 조직 아래 **`Floww-demo` 프로젝트 한 개**를 서울 리전에 만들었다([대시보드](https://supabase.com/dashboard/project/vpmifrlwrbtfwgacojvk)). Supabase가 요구하는 조직 컨테이너의 유형이 `Personal`이며, 팀 조직·별도 A/B/C 프로젝트를 만들거나 유료 플랜으로 전환하지 않았다. Data API는 꺼 두고 DB 연결의 SSL 강제를 켰다. 실제 DB는 PostgreSQL 17.6이며 Flyway V1–V4가 성공했다. 계정 소유자는 개인이므로 팀 접근·장기 소유권은 별도 결정이 필요하다.
 - Vercel 컨테이너 Function은 유휴 시 0으로 축소된다. Supabase Free 프로젝트도 낮은 사용량이 7일간 이어지면 일시 중지될 수 있다. 첫 요청의 콜드 스타트, Spring/Flyway 초기화, 함수 시간·메모리 제한, 동시 인스턴스별 DB 연결 수와 시연 전 DB 활성 상태를 실제 Preview에서 측정·확인한다. 무료 플랜 적합성이나 비용은 계정·프로젝트의 실제 한도 확인 전까지 확정하지 않는다.
 
 ### 프로젝트 환경변수 (값은 저장소에 넣지 않음)
@@ -23,7 +23,10 @@ Status: **Supabase project provisioned; Vercel backend not deployed** (2026-09-2
 | `FLOWW_DB_PASSWORD` | Supabase DB 암호; Vercel 서버 런타임 Secret만 |
 | `FLOWW_DB_CA_CERT_B64` | Supabase Dashboard의 Database SSL Configuration에서 받은 루트 CA 파일의 base64. 시작 시 `/tmp/floww-db-ca.crt`에 권한 0600으로 쓰고 원본 환경변수는 Java 프로세스에 전달하지 않음 |
 | `FLOWW_DB_POOL_MAX` | 기본 `2` (인스턴스별). 실제 Supabase 연결 한도와 Vercel 동시 인스턴스 수 확인 후 조정 |
-| `JWT_SIGNING_KEY`, `KILN_API_KEY` | 해당 기능을 켤 때 필요한 서버 전용 값. 브라우저 `NEXT_PUBLIC_*` 등으로 노출 금지 |
+| `JWT_SIGNING_KEY`, `KILN_API_KEY` | 해당 기능을 켤 때 필요한 서버 전용 값. JWT 키는 재기동·인스턴스 간 동일해야 한다. 브라우저 `NEXT_PUBLIC_*` 등으로 노출 금지 |
+| `FLOWW_CORS_ALLOWED_ORIGINS` | 프런트엔드가 확정된 뒤 정확한 HTTPS origin을 쉼표로 지정. 기본값 빈 목록이며 wildcard·경로·공개 HTTP는 거부. 로컬 개발의 `http://localhost:<port>`만 예외 |
+| `FLOWW_TASK_TOKEN_ADDRESS` | TaskAccount가 실제 참조하는 fUSDC 주소를 독립 확인한 뒤 서버 런타임에 지정. 2026-09-30 RPC 스냅샷은 기존 소스 기본값과 다른 토큰을 보고하므로 기본값으로 지급 준비를 주장하지 않음 |
+| `FLOWW_PHARMACY_A_RECIPIENT` 등 | 각 약국의 검증된 수취 주소가 나오기 전까지 소스의 placeholder를 실제 지급 주소로 취급하지 않음. TaskAccount의 단일 `recipient()`를 세 약국 모두에 매핑하지 않음 |
 | `FLOWW_DEV_TOKEN_ALICE`, `FLOWW_DEV_TOKEN_BOB` | **`dev` 프로필의 격리된 로컬 테스트 전용**. `vercel` 프로필에 설정하지 않음 |
 | 지갑·테스트 상점 변수 | `FLOWW_WALLET_*`, `FLOWW_TEST_MERCHANT_BASE_URL`은 각 기능 담당자가 승인한 경우에만 설정. 현재 테스트 상점 URL은 loopback만 허용 |
 
@@ -31,9 +34,9 @@ CA 값이 없으면 `verify-full` 연결은 실패하도록 두고, 검증을 �
 
 ### 배포 전 게이트
 
-1. Vercel 프로젝트의 소유자, Hobby 사용 조건·한도, Git 연동 시 자동 Preview/Production 배포 범위를 확인한다. 현재 `web5five` 조직 소유 Git 저장소는 Vercel Hobby의 Git 연동 제한에 걸릴 수 있으므로 CLI 배포 또는 팀 플랜의 실제 가능성을 확인한다. **Vercel 프로젝트는 아직 만들지 않았으며 공개 배포·유료 전환도 하지 않았다.**
-2. 새 개인 Supabase DB의 Flyway V1–V3, TLS `verify-full`, `/actuator/health`, 이메일 JWT 가입·보호 API를 확인했다. 다중 콜드 스타트에서 Flyway 잠금/연결 한도와 중단된 `RUNNING` 작업은 아직 확인해야 한다. 개인 프로젝트의 백업·복원 및 팀 인계 계획도 결정한다.
-3. 실제 Vercel Preview에서 `$PORT` 바인딩, 콜드 스타트, 함수 시간·메모리 제한, 재기동 후 DB 상태, JWT 소유자 격리, 지갑 프로필, 프런트엔드 CORS/URL 연결을 확인한다. Health 200만으로 Kiln·상점·결제 준비를 주장하지 않는다.
+1. Vercel CLI의 현재 계정은 개인 `geond` Hobby로 확인했다. 공식 문서상 Hobby 프로젝트에는 조직 소유 Git 저장소를 직접 연결할 수 없으므로 Git 자동 배포를 주장하지 않는다. 무료 계정에서 로컬 소스 CLI Preview 배포 가능성을 확인하되 유료 전환·접근권한 변경은 하지 않는다. **Vercel 프로젝트는 아직 만들지 않았으며 공개 배포도 하지 않았다.**
+2. 개인 Supabase DB의 Flyway V1–V4, TLS `verify-full`, `/actuator/health`, 이메일 JWT 및 Task 생성·조회 API를 확인했다. 다중 콜드 스타트에서 Flyway 잠금/연결 한도와 중단된 레거시 `RUNNING` 실행은 아직 확인해야 한다. 개인 프로젝트의 백업·복원 및 팀 인계 계획도 결정한다.
+3. 실제 Vercel Preview에서 `$PORT` 바인딩, 콜드 스타트, 함수 시간·메모리 제한, 재기동 후 DB 상태, JWT 소유자 격리, 지갑 프로필, 확정된 프런트엔드 origin의 CORS/URL 연결을 확인한다. Health 200만으로 Kiln·상점·결제 준비를 주장하지 않는다.
 4. 별도 약국 배포 없이 한 서비스의 상점 식별 계약을 담당자가 확인한다. 실제 상점 연동 전에는 결제/이행 성공을 시연 결과로 표기하지 않는다.
 5. 릴리스 전에 이전 Vercel 배포로 되돌리는 절차와 **DB 마이그레이션은 앱 롤백만으로 되돌아가지 않는다는 점**을 문서화한다.
 
@@ -56,10 +59,19 @@ docker build --file Dockerfile.vercel --tag floww-vercel-prep:local .
 - 검증: 격리 PostgreSQL 16.4의 `./mvnw -B verify` 144/144; `docker build --file Dockerfile.vercel` 성공; Supabase PostgreSQL 17.6의 인증서 검증 JDBC 연결, Flyway, 로컬 JAR·이미지 health/JWT 스모크 성공. 실제 Vercel Preview·결제·이행은 미검증.
 - 미결정: 중단된 `RUNNING` 실행의 처리 정책, 개인 소유 DB의 팀 인계·백업, Vercel Hobby의 조직 Git 저장소 연결 방식, 공개 배포 승인. 팀 공용 작업 기록은 `PENDING_SYNC`이며 이 문서의 게시만으로 승인이나 Confluence 동기화를 주장하지 않는다.
 
+### 추가 검증 / Follow-up (2026-09-30 KST)
+
+- 기준: 리아님 Task API PR #36이 병합된 `main` `89d08c6`을 기존 PR #27 브랜치에 반영했다. README 충돌은 두 안내 링크를 모두 보존해 해결했다. 컨트롤러의 별도 AI 통합 체크아웃은 수정하지 않았다.
+- 공유 DB 사전 조회: Flyway V1–V3 성공, `users=0`, 레거시 `executions=0`, V4 Task 테이블 0개. V4는 기존 테이블을 변경하지 않는 추가 마이그레이션으로 검토했다. 적용 뒤 Flyway V1–V4가 모두 성공하고 8개 Task 테이블이 존재하며 기존 두 테이블의 행 수는 0으로 유지됐다. DB reset/truncate는 하지 않았다.
+- 실제 DB의 로컬 JAR에서 `PORT=8091` health `UP`, 이메일 JWT로 `POST /api/v1/tasks` → `AWAITING_APPROVAL`/mandate `DRAFT` 및 `GET /api/v1/tasks/{id}`를 확인했다. 합성 사용자·Task·mandate·이벤트만 정확히 삭제하고 잔여 스모크 데이터 0건을 재조회했다. 이 결과는 주문·지급·이행 증거가 아니다.
+- 격리 PostgreSQL 16.4에서 전체 `./mvnw -B verify` **168/168 통과**. 정확한 출처 allowlist가 JWT 필터보다 앞에서 `OPTIONS`를 처리하고 미허용 출처를 403으로 거부하는 HTTP 회귀 3개를 포함한다. `Dockerfile.vercel` 로컬 소스 빌드가 성공했고, 로컬 이미지의 `PORT=8092` health `UP`, 공유 DB Flyway V4 검증, 허용 출처 사전 요청 200을 확인했다.
+- Vercel CLI `56.5.0`의 현재 범위는 기존 `GEOND` Hobby($0). 조직 소유 `web5five` Git 저장소의 자동 연결은 공식 Hobby 제한이므로 현재 경로는 로컬 소스 CLI Preview다. 실제 Vercel 프로젝트·배포는 아직 미생성이다.
+- 별도 컨트롤러 RPC 증거(`TOKEN_FUNDED_20260930_RPC.json`, 2026-09-29T16:24:56Z)는 새 TaskAccount가 기존 서버 기본값과 **다른** fUSDC 토큰을 참조함을 기록한다. 이 스냅샷은 배포 변수 검토 근거이며 SmartContract ABI/EIP-712 일치, 결제·이행의 실증이 아니다. 약국별 수취 주소는 여전히 미확정이다.
+
 ## English
 
-Prepare one `Floww_Server` backend container on Vercel, with Supabase PostgreSQL; decide the separate frontend project independently. Do not provision three pharmacy backends. `Dockerfile.vercel` builds a Java 21 JAR from source; the `vercel` Spring profile binds to `0.0.0.0:${PORT:8080}`. Set `PORT=8080` in Vercel project settings as well. Use server-only runtime secrets and a verified Supabase TLS CA; prefer the Dashboard's direct IPv6 endpoint or the IPv4 Session pooler on 5432, not the unverified Transaction pooler on 6543. Cap each container's Hikari pool and check the actual project connection limit. Supabase Free projects can pause after a week of low activity; check status before a scheduled demo.
+Prepare one `Floww_Server` backend container on Vercel, with Supabase PostgreSQL; decide the separate frontend project independently. Do not provision three pharmacy backends. `Dockerfile.vercel` builds a Java 21 JAR from source; the `vercel` Spring profile binds to `0.0.0.0:${PORT:8080}`. Set `PORT=8080` in Vercel project settings as well. Use server-only runtime secrets and a verified Supabase TLS CA; this environment verified the IPv4 Session pooler on 5432, not the unverified Transaction pooler on 6543. Cap each container's Hikari pool and check the actual project connection limit. Supabase Free projects can pause after a week of low activity; check status before a scheduled demo. Exact HTTPS CORS origins must be configured after the frontend URL is known; the default allows no browser origin.
 
-The personally owned Free `Floww-demo` Supabase project is healthy, with Data API disabled, incoming DB SSL enforced, and Flyway V1–V3 applied. A local Java 21 image connected through the verified-CA IPv4 Session pooler and passed health and JWT smoke checks; an isolated local PostgreSQL run passed 144 tests, including wallet-JWT profile coverage. This is **not Vercel deployment proof**. JWT auth now protects business routes outside `dev`, but an interrupted `RUNNING` execution still has no automatic recovery; the core owner must decide its interruption policy. Verify cold starts, request duration, memory, concurrent connections/Flyway, frontend integration, migration/backup, and rollback in an actual Preview before production. Confirm Vercel Hobby's Git-organization restriction for the `web5five` repository before choosing the deployment workflow. No live Magic OTP, real A/B/C merchant integration, Kiln, Sepolia payment, or fulfillment is claimed.
+The personally owned Free `Floww-demo` Supabase project is healthy, with Data API disabled, incoming DB SSL enforced, and Flyway V1–V4 applied. A local Java 21 image connected through the verified-CA IPv4 Session pooler and passed health, JWT and Task create/read smoke checks; an isolated local PostgreSQL run passed 168 tests, including wallet-JWT profile and CORS HTTP coverage. This is **not Vercel deployment proof**. JWT auth now protects business routes outside `dev`, but an interrupted legacy `RUNNING` execution still has no automatic recovery; the core owner must decide its interruption policy. Verify cold starts, request duration, memory, concurrent connections/Flyway, frontend integration, migration/backup, and rollback in an actual Preview before production. The current `GEOND` Hobby account cannot Git-connect the `web5five` organization repository; CLI source Preview is the candidate free path. New Task orders remain `NOT_ATTEMPTED` for payment and pharmacy recipients are placeholders. No live Magic OTP, Kiln, Sepolia payment, or fulfillment is claimed.
 
 References: [Vercel Docker deployment and port/scale-in contract](https://vercel.com/kb/guide/docker), [Vercel Hobby Git restrictions](https://vercel.com/docs/limits), [Supabase connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supabase TLS verification](https://supabase.com/docs/guides/platform/ssl-enforcement), [Supabase Free project pausing](https://supabase.com/docs/guides/platform/free-project-pausing).

@@ -8,4 +8,5 @@ target/
 *.log
 .DS_Store
 .idea/
+.vercel/
 *.iml
