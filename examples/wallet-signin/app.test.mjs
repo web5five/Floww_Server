@@ -7,21 +7,49 @@ const source = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
 const message = 'Sign in to Floww\n한글';
 const address = '0x' + '1'.repeat(40);
 
-function element() {
+function element(kind = 'other') {
   const node = {
     value: '', hidden: false, disabled: false, textContent: '', handlers: new Map(), options: [],
     addEventListener(name, fn) { this.handlers.set(name, fn); },
-    append(option) {
-      this.options.push(option);
-      option.remove = () => { this.options = this.options.filter(item => item !== option); };
-      if (this.options.length === 1) this.value = option.value;
-    },
     querySelector(selector) {
       const value = selector.match(/^option\[value="(.+)"\]$/)?.[1];
       return this.options.find(option => option.value === value);
     },
     fire(name, ...args) { return this.handlers.get(name)?.(...args); }
   };
+  if (kind === 'select') {
+    let selectedIndex = -1;
+    Object.defineProperties(node, {
+      value: {
+        get() { return this.options[selectedIndex]?.value ?? ''; },
+        set(value) { this.selectedIndex = this.options.findIndex(option => option.value === value); }
+      },
+      selectedIndex: {
+        get() { return selectedIndex; },
+        set(index) {
+          selectedIndex = index;
+          this.options.forEach((option, position) => { option.selected = position === index; });
+        }
+      }
+    });
+    node.append = function (option) {
+      this.options.push(option);
+      option.remove = () => {
+        const index = this.options.indexOf(option);
+        if (index < 0) return;
+        this.options.splice(index, 1);
+        if (selectedIndex === index) {
+          this.selectedIndex = this.options.findIndex(item => !item.disabled);
+        } else if (selectedIndex > index) {
+          this.selectedIndex = selectedIndex - 1;
+        }
+      };
+      // A disabled option is not auto-selected by this native-select stand-in.
+      if (option.selected || (selectedIndex < 0 && !option.disabled)) {
+        this.selectedIndex = this.options.length - 1;
+      }
+    };
+  }
   return node;
 }
 
@@ -49,11 +77,12 @@ function provider() {
 }
 
 function boot(wallet = provider(), { announceOnRequest, fetchImpl } = {}) {
-  const nodes = Object.fromEntries(['#provider', '#status', '#connect', '#retry', '#switch-chain'].map(id => [id, element()]));
+  const nodes = Object.fromEntries(['#provider', '#status', '#connect', '#retry', '#switch-chain']
+    .map(id => [id, element(id === '#provider' ? 'select' : 'other')]));
   const windowEvents = new Map();
   const calls = [];
   const context = {
-    document: { querySelector: id => nodes[id], createElement: () => element() },
+    document: { querySelector: id => nodes[id], createElement: tag => element(tag) },
     window: {
       ethereum: wallet,
       addEventListener(name, fn) { windowEvents.set(name, fn); },
@@ -166,12 +195,16 @@ test('missing provider has a disabled placeholder and late announcement recovers
   const { nodes, calls, windowEvents } = boot(null);
   assert.equal(nodes['#provider'].disabled, true);
   assert.equal(nodes['#provider'].options[0].disabled, true);
+  assert.equal(nodes['#provider'].options[0].selected, true);
+  assert.equal(nodes['#provider'].selectedIndex, 0);
+  assert.equal(nodes['#provider'].options[nodes['#provider'].selectedIndex].textContent, '사용 가능한 지갑 없음');
   assert.equal(nodes['#connect'].disabled, true);
   assert.match(nodes['#status'].textContent, /MetaMask/);
   assert.equal(calls.length, 0);
   announce(windowEvents, 'late-wallet', provider());
   assert.equal(nodes['#provider'].disabled, false);
   assert.equal(nodes['#provider'].value, 'late-wallet');
+  assert.equal(nodes['#provider'].selectedIndex, 0);
   assert.equal(nodes['#connect'].disabled, false);
   assert.equal(nodes['#provider'].options.length, 1);
   await nodes['#connect'].fire('click');

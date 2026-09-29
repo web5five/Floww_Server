@@ -10,7 +10,9 @@ const placeholder = document.createElement('option');
 placeholder.value = '';
 placeholder.textContent = '사용 가능한 지갑 없음';
 placeholder.disabled = true;
+placeholder.selected = true;
 picker.append(placeholder);
+picker.selectedIndex = 0;
 picker.disabled = true;
 connect.disabled = true;
 let accessToken = null; // Session memory only. Never persist or print the token.
