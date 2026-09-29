@@ -3,7 +3,7 @@
   "info": {
     "title": "Floww Server implemented HTTP surface (F015B candidate handoff)",
     "version": "8a5fe58-F015B",
-    "description": "Code-derived development contract through upstream main 8a5fe58 (PR #14 common errors, PR #15 package organization, PR #19 Flyway database migration). PR #19 changes database startup, not these HTTP shapes. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. No wallet, signing, payment, fulfillment or real-user acceptance. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT."
+    "description": "Code-derived development contract through upstream main 8a5fe58 (PR #14 common errors, PR #15 package organization, PR #19 Flyway database migration). PR #19 changes database startup, not these HTTP shapes. AI draft is a proposal only; execution is a local quote-policy/evidence fixture. The F012-F014 Java merchant proposal has no HTTP route. Email/JWT authentication and optional wallet-signature login are exposed; payment, fulfillment and real-user acceptance are not. Outside the mapped F010 draft envelope, unknown paths map to 404 ROUTE_NOT_FOUND; unsupported methods map to 405 METHOD_NOT_ALLOWED with Allow. Recognized Spring argument conversion maps to 400 INVALID_INPUT."
   },
   "servers": [
     {
@@ -25,6 +25,9 @@
     },
     {
       "name": "Legacy local precheck"
+    },
+    {
+      "name": "Authentication"
     }
   ],
   "paths": {
@@ -669,27 +672,6 @@
               }
             }
           },
-          "500": {
-            "description": "Unhandled server exception; internal details are omitted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonError"
-                },
-                "example": {
-                  "reasonCode": "INTERNAL_ERROR",
-                  "code": "INTERNAL_ERROR",
-                  "message": {
-                    "ko": "서버 오류가 발생했습니다",
-                    "en": "Internal server error"
-                  },
-                  "taskId": null,
-                  "attemptId": null,
-                  "retryable": true
-                }
-              }
-            }
-          },
           "415": {
             "description": "Unsupported request media type",
             "content": {
@@ -707,6 +689,27 @@
                   "taskId": null,
                   "attemptId": null,
                   "retryable": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server exception; internal details are omitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                },
+                "example": {
+                  "reasonCode": "INTERNAL_ERROR",
+                  "code": "INTERNAL_ERROR",
+                  "message": {
+                    "ko": "서버 오류가 발생했습니다",
+                    "en": "Internal server error"
+                  },
+                  "taskId": null,
+                  "attemptId": null,
+                  "retryable": true
                 }
               }
             }
@@ -1032,6 +1035,27 @@
               }
             }
           },
+          "400": {
+            "description": "INVALID_INPUT for malformed UUID or parameter conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                },
+                "example": {
+                  "reasonCode": "INVALID_INPUT",
+                  "code": "INVALID_INPUT",
+                  "message": {
+                    "ko": "요청 값이 올바르지 않습니다",
+                    "en": "Invalid request input"
+                  },
+                  "taskId": null,
+                  "attemptId": null,
+                  "retryable": false
+                }
+              }
+            }
+          },
           "401": {
             "description": "UNAUTHORIZED",
             "content": {
@@ -1094,27 +1118,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "INVALID_INPUT for malformed UUID or parameter conversion",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonError"
-                },
-                "example": {
-                  "reasonCode": "INVALID_INPUT",
-                  "code": "INVALID_INPUT",
-                  "message": {
-                    "ko": "요청 값이 올바르지 않습니다",
-                    "en": "Invalid request input"
-                  },
-                  "taskId": null,
-                  "attemptId": null,
-                  "retryable": false
-                }
-              }
-            }
           }
         }
       }
@@ -1158,6 +1161,27 @@
                   },
                   "createdAt": "2026-09-29T00:00:00Z",
                   "updatedAt": "2026-09-29T00:00:01Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT for malformed UUID or parameter conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonError"
+                },
+                "example": {
+                  "reasonCode": "INVALID_INPUT",
+                  "code": "INVALID_INPUT",
+                  "message": {
+                    "ko": "요청 값이 올바르지 않습니다",
+                    "en": "Invalid request input"
+                  },
+                  "taskId": null,
+                  "attemptId": null,
+                  "retryable": false
                 }
               }
             }
@@ -1242,27 +1266,6 @@
               }
             }
           },
-          "500": {
-            "description": "Unhandled server exception; internal details are omitted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonError"
-                },
-                "example": {
-                  "reasonCode": "INTERNAL_ERROR",
-                  "code": "INTERNAL_ERROR",
-                  "message": {
-                    "ko": "서버 오류가 발생했습니다",
-                    "en": "Internal server error"
-                  },
-                  "taskId": null,
-                  "attemptId": null,
-                  "retryable": true
-                }
-              }
-            }
-          },
           "415": {
             "description": "Unsupported request media type",
             "content": {
@@ -1284,23 +1287,23 @@
               }
             }
           },
-          "400": {
-            "description": "INVALID_INPUT for malformed UUID or parameter conversion",
+          "500": {
+            "description": "Unhandled server exception; internal details are omitted",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommonError"
                 },
                 "example": {
-                  "reasonCode": "INVALID_INPUT",
-                  "code": "INVALID_INPUT",
+                  "reasonCode": "INTERNAL_ERROR",
+                  "code": "INTERNAL_ERROR",
                   "message": {
-                    "ko": "요청 값이 올바르지 않습니다",
-                    "en": "Invalid request input"
+                    "ko": "서버 오류가 발생했습니다",
+                    "en": "Internal server error"
                   },
                   "taskId": null,
                   "attemptId": null,
-                  "retryable": false
+                  "retryable": true
                 }
               }
             }
@@ -1730,6 +1733,339 @@
           }
         }
       }
+    },
+    "/api/v1/auth/email/signup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "이메일 회원가입",
+        "description": "이메일은 저장·조회 전에 공백 제거 후 소문자로 정규화됩니다. 요청에 정의되지 않은 필드는 거절됩니다.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailSignupRequest"
+              },
+              "example": {
+                "email": "user@example.com",
+                "password": "StrongPassword123!",
+                "displayName": "Floww User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "회원가입 및 클라이언트 액세스 토큰 발급",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SigninResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT 또는 PASSWORD_POLICY_VIOLATION",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "409": {
+            "description": "EMAIL_ALREADY_EXISTS",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/email/signin": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "이메일 로그인",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailSigninRequest"
+              },
+              "example": {
+                "email": "user@example.com",
+                "password": "StrongPassword123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "클라이언트 액세스 토큰 발급",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SigninResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "403": {
+            "description": "USER_SUSPENDED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/auth/signin": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "관리자 로그인",
+        "description": "ADMIN 계정만 관리자 액세스 토큰을 발급받습니다. USER 계정 로그인 실패는 INVALID_CREDENTIALS로 응답합니다.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailSigninRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "관리자 액세스 토큰 발급",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SigninResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "403": {
+            "description": "USER_SUSPENDED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "현재 인증된 사용자 조회",
+        "security": [
+          {
+            "JwtBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "현재 사용자 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/wallet/nonce": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "지갑 로그인 challenge 발급",
+        "description": "floww.auth.wallet.enabled=true일 때 사용할 수 있습니다. 응답은 Cache-Control: no-store입니다.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletNonceRequest"
+              },
+              "example": {
+                "address": "0x0123456789abcdef0123456789abcdef01234567",
+                "chainId": 11155111
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "서명할 nonce와 메시지",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNonceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT 또는 CHAIN_NOT_SUPPORTED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "429": {
+            "description": "TOO_MANY_REQUESTS",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/wallet/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "지갑 서명 검증 및 로그인",
+        "description": "floww.auth.wallet.enabled=true일 때 사용할 수 있습니다. 응답은 Cache-Control: no-store입니다.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "검증 성공 및 클라이언트 액세스 토큰 발급",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SigninResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_INPUT 또는 CHAIN_NOT_SUPPORTED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "401": {
+            "description": "유효하지 않거나 만료된 challenge 또는 서명",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          },
+          "403": {
+            "description": "USER_SUSPENDED",
+            "content": {
+              "schema": {
+                "$ref": "#/components/schemas/CommonError"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1738,6 +2074,12 @@
         "type": "http",
         "scheme": "bearer",
         "description": "Server-side local development token maps to alice or bob; not browser/Magic/wallet auth."
+      },
+      "JwtBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token issued by email or wallet sign-in."
       }
     },
     "schemas": {
@@ -2534,6 +2876,222 @@
           "attemptId",
           "retryable"
         ]
+      },
+      "EmailSignupRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64,
+            "description": "UTF-8 최대 72바이트이며 공백만 있거나 제어 문자가 포함된 값은 허용되지 않습니다."
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "EmailSigninRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "SigninResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1800
+          },
+          "isNewUser": {
+            "type": "boolean"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "isNewUser",
+          "user"
+        ]
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "ADMIN"
+            ]
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "WALLET"
+              ]
+            }
+          },
+          "wallets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Wallet"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role",
+          "providers",
+          "wallets",
+          "createdAt"
+        ]
+      },
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "walletId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "address": {
+            "type": "string"
+          },
+          "walletType": {
+            "type": "string",
+            "enum": [
+              "EXTERNAL"
+            ]
+          },
+          "primary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "walletId",
+          "address",
+          "walletType",
+          "primary"
+        ]
+      },
+      "WalletNonceRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "chainId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "address",
+          "chainId"
+        ],
+        "additionalProperties": false
+      },
+      "WalletNonceResponse": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{48}$"
+          },
+          "message": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "nonce",
+          "message",
+          "expiresAt"
+        ]
+      },
+      "WalletVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{130}$"
+          }
+        },
+        "required": [
+          "message",
+          "signature"
+        ],
+        "additionalProperties": false
       }
     }
   }
