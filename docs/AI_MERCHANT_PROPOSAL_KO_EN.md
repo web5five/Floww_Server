@@ -1,5 +1,7 @@
 # F012 AI merchant proposal / AI 판매자 제안
 
+Executable synthetic input/output cases and Ria mapping worksheet / 실행 가능한 합성 입출력 예시와 Ria 매핑 표: [F013 integration examples](AI_INTEGRATION_EXAMPLES_KO_EN.md).
+
 Status / 상태: **candidate internal component**, local code and loopback fixture verification only. This document does not approve a shared HTTP API, signer policy, merchant integration or payment. / **내부 후보 컴포넌트**이며 로컬 코드와 루프백 픽스처만 검증했습니다. 공용 HTTP API, 서명 정책, 판매자 연동, 결제를 승인하지 않습니다.
 
 ## Caller contract / 호출자 계약
